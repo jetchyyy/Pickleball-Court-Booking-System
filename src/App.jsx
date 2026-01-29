@@ -1,0 +1,31 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminAnalytics } from './pages/admin/AdminAnalytics';
+import { AdminBookings } from './pages/admin/AdminBookings';
+import { AdminCalendar } from './pages/admin/AdminCalendar';
+import { AdminCourts } from './pages/admin/AdminCourts';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminLogin } from './pages/AdminLogin';
+import { Home } from './pages/Home';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/admin" element={<AdminLogin />} />
+
+        {/* Protected Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="bookings" element={<AdminBookings />} />
+          <Route path="courts" element={<AdminCourts />} />
+          <Route path="calendar" element={<AdminCalendar />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

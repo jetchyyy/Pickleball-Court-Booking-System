@@ -1,0 +1,166 @@
+import { format } from 'date-fns';
+import { Activity, Calendar, Clock, DollarSign, TrendingUp, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Badge, Card } from '../../components/ui';
+
+export function AdminDashboard() {
+    const [stats, setStats] = useState({
+        totalBookings: 0,
+        revenue: 0,
+        activeCourts: 2,
+        todayBookings: 0
+    });
+    const [recentBookings, setRecentBookings] = useState([]);
+
+    useEffect(() => {
+        // Load data from localStorage
+        const storedBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+
+        // Calculate Stats
+        const total = storedBookings.length;
+        const revenue = storedBookings.reduce((sum, b) => sum + (b.court?.price || 0), 0);
+        const today = storedBookings.filter(b =>
+            new Date(b.date).toDateString() === new Date().toDateString()
+        ).length;
+
+        setStats({
+            totalBookings: total,
+            revenue,
+            activeCourts: 2,
+            todayBookings: today
+        });
+
+        // Get recent 5
+        setRecentBookings(storedBookings.reverse().slice(0, 5));
+    }, []);
+
+    const StatCard = ({ title, value, icon: Icon, colorClass }) => (
+        <Card className="p-6 border-none shadow-md">
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-medium text-gray-500">{title}</p>
+                    <p className="text-2xl font-bold mt-1 text-gray-800">{value}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${colorClass}`}>
+                    <Icon size={24} />
+                </div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-600">
+                <TrendingUp size={16} className="mr-1" />
+                <span className="font-medium">+12%</span>
+                <span className="text-gray-400 ml-1">from last month</span>
+            </div>
+        </Card>
+    );
+
+    return (
+        <div className="space-y-8">
+            <div>
+                <h1 className="text-2xl font-bold font-display text-brand-green-dark">Dashboard Overview</h1>
+                <p className="text-gray-500">Welcome back, Admin! Here's what's happening today.</p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                    title="Total Bookings"
+                    value={stats.totalBookings}
+                    icon={Calendar}
+                    colorClass="bg-brand-green-light text-brand-green-dark"
+                />
+                <StatCard
+                    title="Total Revenue"
+                    value={`₱${stats.revenue.toLocaleString()}`}
+                    icon={DollarSign}
+                    colorClass="bg-brand-orange-light text-brand-orange"
+                />
+                <StatCard
+                    title="Active Players"
+                    value="142"
+                    icon={Users}
+                    colorClass="bg-brand-green-light text-brand-green-dark"
+                />
+                <StatCard
+                    title="Bookings Today"
+                    value={stats.todayBookings}
+                    icon={Activity}
+                    colorClass="bg-brand-orange-light text-brand-orange"
+                />
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+                {/* Recent Activity */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-gray-800">Recent Bookings</h2>
+                        <a href="/admin/bookings" className="text-sm text-brand-orange hover:underline">View All</a>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 border-b border-gray-100">
+                                    <tr>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Court</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {recentBookings.map((booking) => (
+                                        <tr key={booking.reference} className="hover:bg-gray-50/50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{booking.name}</td>
+                                            <td className="px-6 py-4 text-gray-600">{booking.court?.name}</td>
+                                            <td className="px-6 py-4 text-gray-600">
+                                                {booking.date ? format(new Date(booking.date), 'MMM d') : '-'} • {booking.time}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <Badge variant="orange">Pending</Badge>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {recentBookings.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No bookings yet.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Actions / System Health */}
+                <div className="space-y-6">
+                    <h2 className="text-lg font-bold text-gray-800">System Status</h2>
+                    <Card className="p-6 space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-brand-green-light rounded-lg border border-brand-green/20">
+                            <div className="flex items-center gap-3">
+                                <div className="h-2 w-2 rounded-full bg-brand-green"></div>
+                                <span className="font-medium text-brand-green-dark">System Online</span>
+                            </div>
+                            <span className="text-xs text-brand-green">99.9% Uptime</span>
+                        </div>
+
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-500">Storage Usage</p>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full w-[24%] bg-brand-green rounded-full"></div>
+                            </div>
+                            <p className="text-xs text-gray-400 text-right">24% used</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-500">Daily API Calls</p>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full w-[65%] bg-brand-orange rounded-full"></div>
+                            </div>
+                            <p className="text-xs text-gray-400 text-right">1.2k / 2k</p>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+}
