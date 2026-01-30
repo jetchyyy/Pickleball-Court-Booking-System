@@ -4,11 +4,12 @@ import { Badge, Button, Card } from './ui';
 export function CourtCard({ court, onBook }) {
     return (
         <Card className="group h-full flex flex-col">
-            <div className="relative h-48 overflow-hidden">
+            <div className="relative h-48 overflow-hidden bg-gray-100">
                 <img
-                    src={court.image}
+                    src={(court.images && court.images[0]?.url) || court.image || '/images/court1.jpg'}
                     alt={court.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => { e.target.src = '/images/court1.jpg'; }}
                 />
                 <div className="absolute top-4 right-4">
                     <Badge variant={court.status === 'Available' ? 'green' : 'gray'}>

@@ -1,14 +1,61 @@
-import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
+import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Users, KeyRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
+import { getCurrentUser, signOut } from '../services/auth';
 
 export function AdminLayout() {
     const navigate = useNavigate();
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const handleLogout = () => {
-        // In a real app, clear auth tokens here
-        navigate('/admin');
+    useEffect(() => {
+        // Check if user is authenticated
+        const checkAuth = async () => {
+            try {
+                const currentUser = await getCurrentUser();
+                if (!currentUser) {
+                    navigate('/admin');
+                } else {
+                    setUser(currentUser);
+                }
+            } catch (err) {
+                console.error('Auth check error:', err);
+                navigate('/admin');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+            navigate('/admin');
+        } catch (err) {
+            console.error('Logout error:', err);
+            alert('Failed to logout');
+        }
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-bg-light">
+                <div className="text-center">
+                    <div className="inline-block animate-spin">
+                        <div className="w-8 h-8 border-4 border-brand-green border-t-transparent rounded-full"></div>
+                    </div>
+                    <p className="mt-4 text-gray-600">Loading admin panel...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return null; // Will redirect in useEffect
+    }
 
     const navItems = [
         { path: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -16,6 +63,7 @@ export function AdminLayout() {
         { path: '/admin/courts', label: 'Court Management', icon: Settings },
         { path: '/admin/calendar', label: 'Calendar View', icon: Calendar },
         { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+        { path: '/admin/change-password', label: 'Change Password', icon: KeyRound },
     ];
 
     return (
@@ -48,6 +96,10 @@ export function AdminLayout() {
                 </nav>
 
                 <div className="p-4 border-t border-gray-100">
+                    <div className="mb-3 px-3 py-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500">Signed in as</p>
+                        <p className="text-sm font-medium text-gray-700 truncate">{user.email}</p>
+                    </div>
                     <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50" onClick={handleLogout}>
                         <LogOut size={18} className="mr-2" /> Logout
                     </Button>

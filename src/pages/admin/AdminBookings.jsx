@@ -3,6 +3,8 @@ import { Calendar, CheckCircle, Clock, Eye, MoreVertical, Search, Trash2, XCircl
 import { useEffect, useState } from 'react';
 import { Badge, Button } from '../../components/ui';
 import { BookingDetailsModal } from '../../components/admin/BookingDetailsModal';
+import { getAllBookings, updateBookingStatus, subscribeToBookings } from '../../services/booking';
+import { supabase } from '../../lib/supabaseClient';
 
 export function AdminBookings() {
     const [bookings, setBookings] = useState([]);
@@ -10,79 +12,73 @@ export function AdminBookings() {
     const [filterStatus, setFilterStatus] = useState('All');
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadBookings();
+        
+        // Subscribe to real-time booking updates
+        const subscription = subscribeToBookings((payload) => {
+            console.log('Booking updated:', payload);
+            loadBookings();
+        });
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
 
-    const loadBookings = () => {
-        const stored = JSON.parse(localStorage.getItem('bookings') || '[]');
-
-        // Static Demo Data
-        const demoData = [
-            {
-                id: 'demo-1',
-                reference: 'NY-2026-001',
-                name: 'Alice Cooper',
-                email: 'alice@resort.com',
-                phone: '09171234567',
-                date: '2026-01-01',
-                time: '08:00 AM',
-                court: { name: 'Center Court', type: 'Indoor Hard' },
-                status: 'Confirmed'
-            },
-            {
-                id: 'demo-2',
-                reference: 'NY-2026-002',
-                name: 'Bob Marley',
-                email: 'bob@music.com',
-                phone: '09187654321',
-                date: '2026-01-01',
-                time: '10:00 AM',
-                court: { name: 'Court 1 (Outdoor)', type: 'Outdoor Hard' },
-                status: 'Pending'
-            },
-            {
-                id: 'demo-3',
-                reference: 'NY-2026-003',
-                name: 'Charlie Puth',
-                email: 'charlie@pop.com',
-                phone: '09198887777',
-                date: '2026-01-01',
-                time: '04:00 PM',
-                court: { name: 'Court 2 (Outdoor)', type: 'Outdoor Hard' },
-                status: 'Confirmed'
-            }
-        ];
-
-        setBookings([...stored, ...demoData].reverse());
+    const loadBookings = async () => {
+        try {
+            setLoading(true);
+            const bookingsData = await getAllBookings();
+            setBookings(bookingsData || []);
+        } catch (err) {
+            console.error('Error loading bookings:', err);
+            setBookings([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateStatus = (id, newStatus) => {
-        const updated = bookings.map(b => b.id === id ? { ...b, status: newStatus } : b);
-        setBookings(updated);
-        localStorage.setItem('bookings', JSON.stringify(updated.reverse())); // Store in original order (oldest first) or handle sorting
+    const updateStatus = async (id, newStatus) => {
+        try {
+            await updateBookingStatus(id, newStatus);
+            await loadBookings();
+        } catch (err) {
+            console.error('Error updating booking status:', err);
+            alert('Failed to update booking status');
+        }
     };
 
-    const deleteBooking = (id) => {
+    const deleteBooking = async (id) => {
         if (!confirm('Are you sure you want to delete this booking?')) return;
-        const updated = bookings.filter(b => b.id !== id);
-        setBookings(updated);
-        localStorage.setItem('bookings', JSON.stringify(updated.reverse()));
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            await loadBookings();
+        } catch (err) {
+            console.error('Error deleting booking:', err);
+            alert('Failed to delete booking');
+        }
     };
 
     const filteredBookings = bookings.filter(b => {
-        const matchesSearch = b.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            b.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            b.email?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = b.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            b.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            b.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
 
         if (filterStatus === 'All') return matchesSearch;
         return matchesSearch && b.status === filterStatus;
     }).sort((a, b) => {
-        if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-        if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-        // Secondary sort by date (newest first) could go here if needed, but array is already reversed (newest first)
-        return 0;
+        // Sort by booking date (newest first)
+        return new Date(b.booking_date) - new Date(a.booking_date);
     });
 
     const getStatusColor = (status) => {
@@ -103,7 +99,7 @@ export function AdminBookings() {
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <div className="flex bg-gray-100 p-1 rounded-xl">
-                        {['All', 'Pending', 'Confirmed', 'Cancelled'].map((status) => (
+                        {['All', 'Confirmed', 'Cancelled'].map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setFilterStatus(status)}
@@ -138,7 +134,7 @@ export function AdminBookings() {
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Ref</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">ID</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Customer</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Details</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
@@ -146,7 +142,13 @@ export function AdminBookings() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredBookings.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                                        Loading bookings...
+                                    </td>
+                                </tr>
+                            ) : filteredBookings.length === 0 ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                                         No bookings found matching your search.
@@ -154,27 +156,28 @@ export function AdminBookings() {
                                 </tr>
                             ) : (
                                 filteredBookings.map((booking) => (
-                                    <tr key={booking.reference} className="hover:bg-gray-50/50">
+                                    <tr key={booking.id} className="hover:bg-gray-50/50">
                                         <td className="px-6 py-4">
-                                            <span className="font-mono font-medium text-gray-600">#{booking.reference}</span>
+                                            <span className="font-mono text-xs font-medium text-gray-600">{booking.id.substring(0, 8)}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div>
-                                                <p className="font-semibold text-gray-900">{booking.name}</p>
-                                                <p className="text-xs text-gray-500">{booking.email}</p>
-                                                <p className="text-xs text-gray-500">{booking.phone}</p>
+                                                <p className="font-semibold text-gray-900">{booking.customer_name}</p>
+                                                <p className="text-xs text-gray-500">{booking.customer_email}</p>
+                                                <p className="text-xs text-gray-500">{booking.customer_phone}</p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="space-y-1">
-                                                <p className="text-sm font-medium text-gray-800">{booking.court?.name}</p>
+                                                <p className="text-sm font-medium text-gray-800">{booking.courts?.name || 'Court'}</p>
                                                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                    <span className="flex items-center gap-1"><Calendar size={12} /> {booking.date ? format(new Date(booking.date), 'MMM d, yyyy') : '-'}</span>
-                                                    <span className="flex items-center gap-1" title={booking.times ? booking.times.join(', ') : booking.time}>
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar size={12} /> 
+                                                        {booking.booking_date ? format(new Date(booking.booking_date), 'MMM d, yyyy') : '-'}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
                                                         <Clock size={12} />
-                                                        {booking.times
-                                                            ? (booking.times.length > 1 ? `${booking.times.length} slots` : booking.times[0])
-                                                            : booking.time}
+                                                        {booking.start_time} - {booking.end_time}
                                                     </span>
                                                 </div>
                                             </div>

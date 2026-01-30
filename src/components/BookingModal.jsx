@@ -44,7 +44,14 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
             return;
         }
 
-        onConfirm({ ...formData, ...bookingData });
+        // Calculate total price based on court price and number of time slots
+        const totalPrice = (bookingData.court?.price || 0) * (bookingData.times?.length || 1);
+        
+        onConfirm({ 
+            ...formData, 
+            ...bookingData,
+            totalPrice: totalPrice
+        });
         setStep(3);
     };
 
@@ -139,7 +146,11 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
                                     placeholder="09123456789"
                                     maxLength={11}
                                 />
-                                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+                                {errors.phone ? (
+                                    <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
+                                ) : (
+                                    <p className="text-xs text-gray-500 mt-1">Please enter a valid contact number for us to easily contact you</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
@@ -251,16 +262,16 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
                         </div>
 
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Submitted!</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
                             <p className="text-gray-600 text-base leading-relaxed">
                                 Thank you for booking with us.
                             </p>
-                            <div className="mt-4 p-4 bg-brand-orange-light/50 border border-brand-orange/20 rounded-xl text-brand-orange-dark text-sm">
+                            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
                                 <p className="font-medium flex items-center justify-center gap-2">
-                                    <Clock size={16} /> Status: Pending Approval
+                                    <CheckCircle size={16} /> Status: Confirmed
                                 </p>
                                 <p className="mt-2 text-gray-600">
-                                    Please wait for the approval text or email confirmation before proceeding to the court.
+                                    Your booking has been confirmed. Please check your email for details and show up on time.
                                 </p>
                             </div>
                         </div>

@@ -2,54 +2,40 @@ import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMont
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui';
+import { getAllBookings, subscribeToBookings } from '../../services/booking';
 
 export function AdminCalendar() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [bookings, setBookings] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const stored = JSON.parse(localStorage.getItem('bookings') || '[]');
+        loadBookings();
+        
+        // Subscribe to real-time updates
+        const subscription = subscribeToBookings(() => {
+            loadBookings();
+        });
 
-        // Static Demo Data for Jan 1st
-        const demoData = [
-            {
-                id: 'demo-1',
-                reference: 'NY-2026-001',
-                name: 'Alice Cooper',
-                email: 'alice@resort.com',
-                phone: '09171234567',
-                date: '2026-01-01',
-                time: '08:00 AM',
-                court: { name: 'Center Court', type: 'Indoor Hard' },
-                status: 'Confirmed'
-            },
-            {
-                id: 'demo-2',
-                reference: 'NY-2026-002',
-                name: 'Bob Marley',
-                email: 'bob@music.com',
-                phone: '09187654321',
-                date: '2026-01-01',
-                time: '10:00 AM',
-                court: { name: 'Court 1 (Outdoor)', type: 'Outdoor Hard' },
-                status: 'Pending'
-            },
-            {
-                id: 'demo-3',
-                reference: 'NY-2026-003',
-                name: 'Charlie Puth',
-                email: 'charlie@pop.com',
-                phone: '09198887777',
-                date: '2026-01-01',
-                time: '04:00 PM',
-                court: { name: 'Court 2 (Outdoor)', type: 'Outdoor Hard' },
-                status: 'Confirmed'
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
             }
-        ];
-
-        setBookings([...stored, ...demoData]);
+        };
     }, []);
+
+    const loadBookings = async () => {
+        try {
+            setLoading(true);
+            const data = await getAllBookings();
+            setBookings(data || []);
+        } catch (err) {
+            console.error('Error loading bookings:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const firstDayNextMonth = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
@@ -67,7 +53,8 @@ export function AdminCalendar() {
     const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
     const getBookingsForDate = (date) => {
-        return bookings.filter(b => isSameDay(parseISO(b.date), date));
+        const dateStr = format(date, 'yyyy-MM-dd');
+        return bookings.filter(b => b.booking_date === dateStr);
     };
 
     const selectedDayBookings = getBookingsForDate(selectedDate);
@@ -129,8 +116,8 @@ export function AdminCalendar() {
 
                                     {/* Indicators */}
                                     <div className="space-y-1">
-                                        {/* Simplified indicators: just show dots for density */}
-                                        {Array.from({ length: Math.min(dayBookings.reduce((acc, b) => acc + (b.times?.length || 1), 0), 4) }).map((_, i) => (
+                                        {/* Show dots for each booking on this date (max 4) */}
+                                        {Array.from({ length: Math.min(dayBookings.length, 4) }).map((_, i) => (
                                             <div key={i} className="h-1.5 rounded-full bg-brand-orange w-full opacity-80"></div>
                                         ))}
                                     </div>
@@ -150,25 +137,20 @@ export function AdminCalendar() {
                         {selectedDayBookings.length > 0 ? (
                             <div className="space-y-4">
                                 {selectedDayBookings
-                                    .flatMap(b => {
-                                        if (b.times && b.times.length > 0) {
-                                            return b.times.map(t => ({ ...b, time: t }));
-                                        }
-                                        return [b];
-                                    })
-                                    .sort((a, b) => a.time.localeCompare(b.time))
-                                    .map((booking, idx) => (
-                                        <div key={`${booking.reference}-${booking.time}-${idx}`} className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-brand-green/30 transition-colors">
+                                    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                                    .map((booking) => (
+                                        <div key={booking.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-brand-green/30 transition-colors">
                                             <div className="flex justify-between items-start mb-2">
-                                                <span className="font-bold text-gray-800">{booking.time}</span>
-                                                <Badge variant={booking.status === 'Confirmed' ? 'green' : 'orange'}>
+                                                <span className="font-bold text-gray-800">{booking.start_time} - {booking.end_time}</span>
+                                                <Badge variant={booking.status === 'Confirmed' ? 'green' : booking.status === 'Cancelled' ? 'red' : 'orange'}>
                                                     {booking.status}
                                                 </Badge>
                                             </div>
-                                            <p className="font-medium text-sm text-gray-900">{booking.name}</p>
-                                            <p className="text-xs text-gray-500">{booking.court?.name}</p>
+                                            <p className="font-medium text-sm text-gray-900">{booking.customer_name}</p>
+                                            <p className="text-xs text-gray-500">{booking.courts?.name || 'N/A'}</p>
+                                            <p className="text-xs text-gray-400 mt-1">₱{booking.total_price}</p>
                                             <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between text-xs text-gray-400">
-                                                <span>Ref: {booking.reference}</span>
+                                                <span>ID: {booking.id.substring(0, 8)}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -176,7 +158,7 @@ export function AdminCalendar() {
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
                                 <Calendar size={48} className="mb-4 opacity-20" />
-                                <p>No bookings for this date.</p>
+                                <p>{loading ? 'Loading bookings...' : 'No bookings for this date.'}</p>
                             </div>
                         )}
                     </div>

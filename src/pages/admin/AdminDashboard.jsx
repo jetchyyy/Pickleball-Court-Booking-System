@@ -2,37 +2,58 @@ import { format } from 'date-fns';
 import { Activity, Calendar, Clock, DollarSign, TrendingUp, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge, Card } from '../../components/ui';
+import { getAllBookings } from '../../services/booking';
+import { listCourts } from '../../services/courts';
 
 export function AdminDashboard() {
     const [stats, setStats] = useState({
         totalBookings: 0,
         revenue: 0,
-        activeCourts: 2,
+        activeCourts: 0,
         todayBookings: 0
     });
     const [recentBookings, setRecentBookings] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load data from localStorage
-        const storedBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-
-        // Calculate Stats
-        const total = storedBookings.length;
-        const revenue = storedBookings.reduce((sum, b) => sum + (b.court?.price || 0), 0);
-        const today = storedBookings.filter(b =>
-            new Date(b.date).toDateString() === new Date().toDateString()
-        ).length;
-
-        setStats({
-            totalBookings: total,
-            revenue,
-            activeCourts: 2,
-            todayBookings: today
-        });
-
-        // Get recent 5
-        setRecentBookings(storedBookings.reverse().slice(0, 5));
+        loadDashboardData();
     }, []);
+
+    const loadDashboardData = async () => {
+        try {
+            setLoading(true);
+            
+            // Fetch all bookings and courts
+            const bookings = await getAllBookings();
+            const courts = await listCourts();
+
+            // Calculate stats
+            const total = bookings ? bookings.length : 0;
+            const revenue = bookings ? bookings.reduce((sum, b) => sum + (b.total_price || 0), 0) : 0;
+            
+            // Count today's bookings
+            const today = new Date().toISOString().split('T')[0];
+            const todayCount = bookings ? bookings.filter(b => b.booking_date === today).length : 0;
+
+            setStats({
+                totalBookings: total,
+                revenue: revenue,
+                activeCourts: courts ? courts.length : 0,
+                todayBookings: todayCount
+            });
+
+            // Get recent 5 bookings (sorted by booking_date desc)
+            const recent = bookings ? bookings.sort((a, b) => 
+                new Date(b.booking_date) - new Date(a.booking_date)
+            ).slice(0, 5) : [];
+            
+            setRecentBookings(recent);
+        } catch (err) {
+            console.error('Error loading dashboard data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const StatCard = ({ title, value, icon: Icon, colorClass }) => (
         <Card className="p-6 border-none shadow-md">
@@ -64,25 +85,25 @@ export function AdminDashboard() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     title="Total Bookings"
-                    value={stats.totalBookings}
+                    value={loading ? '...' : stats.totalBookings}
                     icon={Calendar}
                     colorClass="bg-brand-green-light text-brand-green-dark"
                 />
                 <StatCard
                     title="Total Revenue"
-                    value={`₱${stats.revenue.toLocaleString()}`}
+                    value={loading ? '...' : `₱${stats.revenue.toLocaleString()}`}
                     icon={DollarSign}
                     colorClass="bg-brand-orange-light text-brand-orange"
                 />
                 <StatCard
-                    title="Active Players"
-                    value="142"
+                    title="Active Courts"
+                    value={loading ? '...' : stats.activeCourts}
                     icon={Users}
                     colorClass="bg-brand-green-light text-brand-green-dark"
                 />
                 <StatCard
                     title="Bookings Today"
-                    value={stats.todayBookings}
+                    value={loading ? '...' : stats.todayBookings}
                     icon={Activity}
                     colorClass="bg-brand-orange-light text-brand-orange"
                 />
@@ -109,20 +130,24 @@ export function AdminDashboard() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {recentBookings.map((booking) => (
-                                        <tr key={booking.reference} className="hover:bg-gray-50/50">
-                                            <td className="px-6 py-4 font-medium text-gray-900">{booking.name}</td>
-                                            <td className="px-6 py-4 text-gray-600">{booking.court?.name}</td>
+                                        <tr key={booking.id} className="hover:bg-gray-50/50">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{booking.customer_name}</td>
+                                            <td className="px-6 py-4 text-gray-600">{booking.courts?.name || 'N/A'}</td>
                                             <td className="px-6 py-4 text-gray-600">
-                                                {booking.date ? format(new Date(booking.date), 'MMM d') : '-'} • {booking.time}
+                                                {booking.booking_date ? format(new Date(booking.booking_date), 'MMM d') : '-'} • {booking.start_time}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <Badge variant="orange">Pending</Badge>
+                                                <Badge variant={booking.status === 'Confirmed' ? 'green' : booking.status === 'Cancelled' ? 'red' : 'orange'}>
+                                                    {booking.status}
+                                                </Badge>
                                             </td>
                                         </tr>
                                     ))}
                                     {recentBookings.length === 0 && (
                                         <tr>
-                                            <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No bookings yet.</td>
+                                            <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                                {loading ? 'Loading bookings...' : 'No bookings yet.'}
+                                            </td>
                                         </tr>
                                     )}
                                 </tbody>

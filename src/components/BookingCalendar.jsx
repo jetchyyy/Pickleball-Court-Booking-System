@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from './ui';
 
-export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = [], onTimeSelect }) {
+export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = [], onTimeSelect, bookedTimes = [], fullyBookedDates = [] }) {
     const today = startOfToday();
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(today));
 
@@ -45,6 +45,22 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
 
     return (
         <div className="space-y-8">
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 items-center text-sm px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-white border border-brand-green"></div>
+                    <span className="text-gray-700">Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-brand-orange/30 border border-brand-orange"></div>
+                    <span className="text-gray-700">Partially Booked</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-red-100 border border-red-400"></div>
+                    <span className="text-gray-700">Fully Booked</span>
+                </div>
+            </div>
+
             {/* Calendar Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -70,8 +86,8 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
 
                 {/* Days Grid */}
                 <div className="grid grid-cols-7 gap-y-2 mb-2">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-                        <div key={day} className="text-center text-xs font-medium text-gray-400">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                        <div key={index} className="text-center text-xs font-medium text-gray-400">
                             {day}
                         </div>
                     ))}
@@ -85,19 +101,22 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                         const isSelected = isSameDay(day, selectedDate);
                         const isPast = isBefore(day, today);
                         const isTodayDate = isSameDay(day, today);
+                        const isFullyBooked = fullyBookedDates.some(d => isSameDay(d, day));
 
                         return (
-                            <div key={day.toString()} className="flex justify-center">
+                            <div key={day.toString()} className="flex justify-center relative">
                                 <button
                                     onClick={() => !isPast && onDateSelect(day)}
                                     disabled={isPast}
                                     className={cn(
-                                        'h-10 w-10 rounded-full flex items-center justify-center text-sm transition-all duration-200',
+                                        'h-10 w-10 rounded-full flex items-center justify-center text-sm transition-all duration-200 relative',
                                         isSelected && 'bg-brand-green text-brand-green-dark font-bold shadow-md',
-                                        !isSelected && !isPast && 'hover:bg-brand-green/20 text-gray-700',
-                                        !isSelected && isTodayDate && 'border border-brand-green text-brand-green font-semibold',
-                                        isPast && 'text-gray-300 cursor-not-allowed'
+                                        !isSelected && isPast && 'text-gray-300 cursor-not-allowed',
+                                        !isSelected && !isPast && isFullyBooked && 'bg-red-100 border-2 border-red-400 text-red-600 font-semibold cursor-not-allowed hover:bg-red-100',
+                                        !isSelected && !isPast && !isFullyBooked && 'hover:bg-brand-green/20 text-gray-700',
+                                        !isSelected && isTodayDate && !isFullyBooked && 'border border-brand-green text-brand-green font-semibold',
                                     )}
+                                    title={isFullyBooked ? 'All time slots are booked for this date' : undefined}
                                 >
                                     {format(day, 'd')}
                                 </button>
@@ -119,16 +138,21 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {timeSlots.map((slot) => {
                         const isSelected = selectedTimes.includes(slot.id);
+                        const isBooked = bookedTimes.includes(slot.id);
                         return (
                             <button
                                 key={slot.id}
-                                onClick={() => onTimeSelect(slot.id)}
+                                onClick={() => !isBooked && onTimeSelect(slot.id)}
+                                disabled={isBooked}
                                 className={cn(
                                     'py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200',
-                                    isSelected
+                                    isBooked
+                                        ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                                        : isSelected
                                         ? 'bg-brand-orange text-white border-brand-orange shadow-md scale-105'
                                         : 'bg-white border-gray-200 text-gray-600 hover:border-brand-orange hover:text-brand-orange'
                                 )}
+                                title={isBooked ? 'This time slot is already booked' : undefined}
                             >
                                 {slot.label}
                             </button>

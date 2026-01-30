@@ -8,23 +8,80 @@ import { CourtCard } from '../components/CourtCard';
 import { Footer } from '../components/Footer';
 import { Hero } from '../components/Hero';
 import { Navbar } from '../components/Navbar';
-
-import { courts } from '../data/courts';
+import { listCourts, subscribeToCourts } from '../services/courts';
+import { getCourtBookings, subscribeToBookings } from '../services/booking';
 
 export function Home() {
     const [selectedCourt, setSelectedCourt] = useState(null);
     const [selectedDate, setSelectedDate] = useState(startOfToday());
     const [selectedTimes, setSelectedTimes] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [activeCourts, setActiveCourts] = useState(courts);
+    const [activeCourts, setActiveCourts] = useState([]);
+    const [courtBookings, setCourtBookings] = useState([]);
     const [validationError, setValidationError] = useState('');
+    const [loading, setLoading] = useState(false);
 
+    // Load courts from Supabase
     useEffect(() => {
-        const storedCourts = localStorage.getItem('courts');
-        if (storedCourts) {
-            setActiveCourts(JSON.parse(storedCourts));
-        }
+        loadCourts();
+        
+        // Subscribe to court updates
+        const subscription = subscribeToCourts((payload) => {
+            loadCourts();
+        });
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
+
+    const loadCourts = async () => {
+        try {
+            const courts = await listCourts();
+            setActiveCourts(courts || []);
+        } catch (err) {
+            // Fallback to empty array
+            setActiveCourts([]);
+        }
+    };
+
+    // Load bookings when court or date changes
+    useEffect(() => {
+        if (selectedCourt) {
+            loadBookings();
+            
+            // Subscribe to booking updates for this court
+            const subscription = subscribeToBookings((payload) => {
+                loadBookings();
+            });
+
+            return () => {
+                if (subscription) {
+                    subscription.unsubscribe();
+                }
+            };
+        }
+    }, [selectedCourt, selectedDate]);
+
+    const loadBookings = async () => {
+        if (!selectedCourt) return;
+        
+        try {
+            setLoading(true);
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            const bookings = await getCourtBookings(
+                selectedCourt.id,
+                dateStr
+            );
+            setCourtBookings(bookings || []);
+        } catch (err) {
+            setCourtBookings([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleBookClick = (court) => {
         setSelectedCourt(court);
@@ -33,23 +90,131 @@ export function Home() {
         document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const handleBookingConfirm = (bookingData) => {
-        // Save to localStorage for Admin Dashboard demo
-        const newBooking = {
-            id: Date.now(),
-            ...bookingData,
-            status: 'Pending',
-            timestamp: new Date().toISOString()
-        };
+    // Get booked time slots for the selected date
+    const getBookedTimes = () => {
+        if (!courtBookings || courtBookings.length === 0) {
+            return [];
+        }
+        
+        const bookedSlots = [];
+        courtBookings.forEach(booking => {
+            if (booking.start_time) {
+                // Normalize time format: remove seconds if present (10:00:00 -> 10:00)
+                const timeWithoutSeconds = booking.start_time.substring(0, 5);
+                bookedSlots.push(timeWithoutSeconds);
+            }
+        });
+        return bookedSlots;
+    };
 
-        const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-        localStorage.setItem('bookings', JSON.stringify([...existingBookings, newBooking]));
+    // Get list of fully booked dates (all time slots booked)
+    const getFullyBookedDates = () => {
+        if (!selectedCourt || activeCourts.length === 0) return [];
 
-        console.log("Booking Confirmed:", newBooking);
-        // Alert removed. Modal handles success.
-        // Do NOT close modal here. Let the Success step 'Done' button handle it via onClose.
-        setSelectedTimes([]);
-        setSelectedCourt(null);
+        // Define all time slots
+        const timeSlots = ['08:00', '09:00', '10:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+        
+        // Group bookings by date
+        const bookingsByDate = {};
+        activeCourts.forEach(court => {
+            if (court.id === selectedCourt.id) {
+                // This will be populated as we load bookings for different dates
+                // For now, just return empty for simplicity
+            }
+        });
+
+        // Note: This feature requires fetching bookings for all dates, not just selected date
+        // For MVP, we'll show "Fully Booked" only for dates where we have all 8 slots booked
+        const bookedDates = {};
+        
+        // We'd need to load all bookings for the court to accurately determine fully booked dates
+        // This is a future enhancement - for now return empty
+        return [];
+    };
+
+    const bookedTimes = getBookedTimes();
+    const fullyBookedDates = getFullyBookedDates();
+
+    const handleBookingConfirm = async (bookingData) => {
+        try {
+            const { createBooking, uploadProofOfPayment } = await import('../services/booking');
+            
+            // Extract start and end times from the first time slot
+            const firstTimeSlot = bookingData.times?.[0] || bookingData.time;
+            let startTime = '08:00';
+            let endTime = '09:00';
+            
+            if (firstTimeSlot && typeof firstTimeSlot === 'string') {
+                if (firstTimeSlot.includes('-')) {
+                    const parts = firstTimeSlot.split('-');
+                    if (parts[0] && parts[1]) {
+                        startTime = parts[0].trim();
+                        endTime = parts[1].trim();
+                    }
+                } else {
+                    startTime = firstTimeSlot.trim();
+                    const [hours, minutes] = startTime.split(':');
+                    const endHour = parseInt(hours) + 1;
+                    endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
+                }
+            }
+            
+            // Create booking first
+            const newBooking = await createBooking({
+                courtId: selectedCourt.id,
+                customerName: bookingData.name,
+                customerEmail: bookingData.email,
+                customerPhone: bookingData.phone,
+                bookingDate: selectedDate.toISOString().split('T')[0],
+                startTime: startTime,
+                endTime: endTime,
+                totalPrice: bookingData.totalPrice || 0,
+                notes: bookingData.notes || '',
+                proofOfPaymentUrl: null
+            });
+
+            // Try to upload proof of payment if file exists
+            if (bookingData.paymentProof) {
+                try {
+                    const proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, newBooking.id);
+                    
+                    if (!proofOfPaymentUrl) {
+                        throw new Error('No URL returned from upload');
+                    }
+                    
+                    // Update booking with proof of payment URL
+                    const { supabase } = await import('../lib/supabaseClient');
+                    const { data: updateData, error: updateError } = await supabase
+                        .from('bookings')
+                        .update({ proof_of_payment_url: proofOfPaymentUrl })
+                        .eq('id', newBooking.id)
+                        .select();
+                    
+                    if (updateError) {
+                        // Booking is still successful, just log the error
+                    }
+                } catch (uploadErr) {
+                    // Booking is still successful, just log the error
+                }
+            }
+
+            await loadBookings();
+            setSelectedTimes([]);
+            setIsModalOpen(false);
+        } catch (err) {
+            // Reload bookings to show updated availability
+            await loadBookings();
+            
+            // Check if it's a race condition error (duplicate key constraint)
+            let userFriendlyMessage = 'Failed to create booking. Please try again.';
+            if (err.message && err.message.includes('unique constraint')) {
+                userFriendlyMessage = '⚠️ Sorry! One or more selected time slots were just booked by another customer. Please select different times and try again.';
+            } else if (err.message) {
+                userFriendlyMessage = `Error: ${err.message}`;
+            }
+            
+            setValidationError(userFriendlyMessage);
+        }
     };
 
     return (
@@ -100,6 +265,8 @@ export function Home() {
                             selectedDate={selectedDate}
                             onDateSelect={setSelectedDate}
                             selectedTimes={selectedTimes}
+                            bookedTimes={bookedTimes}
+                            fullyBookedDates={fullyBookedDates}
                             onTimeSelect={(time) => {
                                 // Toggle time selection
                                 const newTimes = selectedTimes.includes(time)

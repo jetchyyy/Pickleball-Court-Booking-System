@@ -1,81 +1,116 @@
-import { Edit2, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../../components/ui';
-import { courts as initialCourts } from '../../data/courts';
+import { createCourt, deleteCourt, listCourts, subscribeToCourts } from '../../services/courts';
 
 export function AdminCourts() {
     const [courts, setCourts] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingCourt, setEditingCourt] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [imagePreview, setImagePreview] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
         type: 'Outdoor Hard',
         price: 350,
-        image: '/images/court1.jpg',
-        description: ''
+        description: '',
+        imageFiles: null
     });
 
     useEffect(() => {
         loadCourts();
+        
+        // Subscribe to real-time updates
+        const subscription = subscribeToCourts((payload) => {
+            console.log('Court update received:', payload);
+            loadCourts();
+        });
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
 
-    const loadCourts = () => {
-        const stored = localStorage.getItem('courts');
-        if (stored) {
-            setCourts(JSON.parse(stored));
-        } else {
-            // Seed with default data if empty
-            localStorage.setItem('courts', JSON.stringify(initialCourts));
-            setCourts(initialCourts);
+    const loadCourts = async () => {
+        try {
+            const data = await listCourts();
+            setCourts(data || []);
+        } catch (err) {
+            console.error('Error loading courts:', err);
+            setError('Failed to load courts');
         }
     };
 
-    const handleSave = (e) => {
-        e.preventDefault();
-        let updatedCourts;
-
-        if (editingCourt) {
-            // Update existing
-            updatedCourts = courts.map(c => c.id === editingCourt.id ? { ...c, ...formData, price: Number(formData.price) } : c);
-        } else {
-            // Add new
-            const newCourt = {
-                id: Date.now(), // simple ID generation
-                ...formData,
-                price: Number(formData.price),
-                status: 'Available'
+    const handleImageSelect = (e) => {
+        const files = e.target.files;
+        setFormData({ ...formData, imageFiles: files });
+        
+        // Show preview
+        const previews = [];
+        for (let i = 0; i < files.length; i++) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previews.push(event.target.result);
+                if (previews.length === files.length) {
+                    setImagePreview(previews);
+                }
             };
-            updatedCourts = [...courts, newCourt];
+            reader.readAsDataURL(files[i]);
         }
-
-        setCourts(updatedCourts);
-        localStorage.setItem('courts', JSON.stringify(updatedCourts));
-        resetForm();
     };
 
-    const handleDelete = (id) => {
-        if (!confirm('Area you sure you want to remove this court?')) return;
-        const updatedCourts = courts.filter(c => c.id !== id);
-        setCourts(updatedCourts);
-        localStorage.setItem('courts', JSON.stringify(updatedCourts));
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            await createCourt({
+                name: formData.name,
+                type: formData.type,
+                price: Number(formData.price),
+                description: formData.description,
+                imageFiles: formData.imageFiles || []
+            });
+
+            await loadCourts();
+            resetForm();
+        } catch (err) {
+            console.error('Error creating court:', err);
+            setError(err.message || 'Failed to create court');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const startEdit = (court) => {
-        setEditingCourt(court);
-        setFormData({
-            name: court.name,
-            type: court.type,
-            price: court.price,
-            image: court.image,
-            description: court.description
-        });
-        setIsFormOpen(true);
+    const handleDelete = async (id) => {
+        if (!confirm('Are you sure you want to remove this court?')) return;
+        
+        setLoading(true);
+        try {
+            await deleteCourt(id);
+            await loadCourts();
+        } catch (err) {
+            console.error('Error deleting court:', err);
+            setError('Failed to delete court');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const resetForm = () => {
         setIsFormOpen(false);
-        setEditingCourt(null);
-        setFormData({ name: '', type: 'Outdoor Hard', price: 350, image: '/images/court1.jpg', description: '' });
+        setFormData({
+            name: '',
+            type: 'Outdoor Hard',
+            price: 350,
+            description: '',
+            imageFiles: null
+        });
+        setImagePreview([]);
+        setError('');
     };
 
     return (
@@ -85,15 +120,21 @@ export function AdminCourts() {
                     <h1 className="text-2xl font-bold font-display text-brand-green-dark">Court Management</h1>
                     <p className="text-gray-500">Add, edit, or remove playing courts</p>
                 </div>
-                <Button onClick={() => setIsFormOpen(true)}>
+                <Button onClick={() => setIsFormOpen(true)} disabled={loading}>
                     <Plus size={18} className="mr-2" /> Add Court
                 </Button>
             </div>
 
+            {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    {error}
+                </div>
+            )}
+
             {isFormOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl animate-in zoom-in duration-200">
-                        <h2 className="text-xl font-bold mb-4">{editingCourt ? 'Edit Court' : 'Add New Court'}</h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl my-8">
+                        <h2 className="text-xl font-bold mb-4">Add New Court</h2>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Court Name</label>
@@ -102,17 +143,20 @@ export function AdminCourts() {
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
                                     placeholder="e.g. Court 3 (Indoor)"
+                                    disabled={loading}
                                 />
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                                     <select
                                         value={formData.type}
                                         onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
+                                        disabled={loading}
                                     >
                                         <option>Outdoor Hard</option>
                                         <option>Indoor Hard</option>
@@ -127,61 +171,111 @@ export function AdminCourts() {
                                         type="number"
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
+                                        disabled={loading}
                                     />
                                 </div>
                             </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea
                                     value={formData.description}
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
                                     rows="3"
+                                    disabled={loading}
+                                    placeholder="Describe the court features, amenities, etc."
                                 ></textarea>
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Court Images</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleImageSelect}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-green file:text-white hover:file:bg-brand-green-dark disabled:opacity-50"
+                                    disabled={loading}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">You can upload multiple images</p>
+                            </div>
+
+                            {imagePreview.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {imagePreview.map((preview, idx) => (
+                                        <div key={idx} className="relative aspect-square">
+                                            <img src={preview} alt={`Preview ${idx}`} className="w-full h-full object-cover rounded-lg" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="flex gap-3 pt-2">
-                                <Button variant="ghost" type="button" className="flex-1" onClick={resetForm}>Cancel</Button>
-                                <Button type="submit" className="flex-1">{editingCourt ? 'Update Court' : 'Create Court'}</Button>
+                                <Button 
+                                    variant="ghost" 
+                                    type="button" 
+                                    className="flex-1" 
+                                    onClick={resetForm}
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    className="flex-1"
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Creating...' : 'Create Court'}
+                                </Button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {courts.map((court) => (
-                    <Card key={court.id} className="overflow-hidden group">
-                        <div className="aspect-video relative overflow-hidden bg-gray-100">
-                            <img src={court.image} alt={court.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute top-2 right-2 flex gap-1">
-                                <button
-                                    onClick={() => startEdit(court)}
-                                    className="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-sm backdrop-blur-sm transition-colors"
-                                >
-                                    <Edit2 size={16} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(court.id)}
-                                    className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="p-5">
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
-                                    <p className="text-sm text-gray-500">{court.type}</p>
+            {courts.length === 0 ? (
+                <div className="text-center py-12">
+                    <p className="text-gray-500">No courts added yet. Create your first court!</p>
+                </div>
+            ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {courts.map((court) => (
+                        <Card key={court.id} className="overflow-hidden group">
+                            <div className="aspect-video relative overflow-hidden bg-gray-100">
+                                <img 
+                                    src={(court.images && court.images[0]?.url) || '/images/court1.jpg'} 
+                                    alt={court.name} 
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                />
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                    <button
+                                        onClick={() => handleDelete(court.id)}
+                                        disabled={loading}
+                                        className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
-                                <span className="font-bold text-brand-orange">₱{court.price}</span>
                             </div>
-                            <p className="text-sm text-gray-600 line-clamp-2">{court.description}</p>
-                        </div>
-                    </Card>
-                ))}
-            </div>
+                            <div className="p-5">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
+                                        <p className="text-sm text-gray-500">{court.type}</p>
+                                    </div>
+                                    <span className="font-bold text-brand-orange">₱{court.price}</span>
+                                </div>
+                                <p className="text-sm text-gray-600 line-clamp-2">{court.description}</p>
+                                {court.images && court.images.length > 0 && (
+                                    <p className="text-xs text-gray-400 mt-2">{court.images.length} image(s)</p>
+                                )}
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

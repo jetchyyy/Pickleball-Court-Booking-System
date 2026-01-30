@@ -1,20 +1,40 @@
 import { Lock, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
+import { signIn } from '../services/auth';
 
 export function AdminLogin() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    useEffect(() => {
+        // Check if already logged in
+        const checkAuth = async () => {
+            const { data } = await import('../lib/supabaseClient').then(m => m.supabase.auth.getSession());
+            if (data?.session) {
+                navigate('/admin/dashboard');
+            }
+        };
+        checkAuth();
+    }, [navigate]);
+
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Mock authentication
-        if (email === 'admin@pickle.com' && password === 'admin123') {
+        setError('');
+        setLoading(true);
+
+        try {
+            await signIn(email, password);
             navigate('/admin/dashboard');
-        } else {
-            alert('Invalid credentials!');
+        } catch (err) {
+            setError(err.message || 'Invalid credentials. Please try again.');
+            console.error('Login error:', err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -51,17 +71,26 @@ export function AdminLogin() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all"
                                 placeholder="Enter your password"
+                                required
+                                disabled={loading}
                             />
                         </div>
                     </div>
 
-                    <Button className="w-full" size="lg">Sign In</Button>
+                    {error && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                            {error}
+                        </div>
+                    )}
+
+                    <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                        {loading ? 'Signing In...' : 'Sign In'}
+                    </Button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-gray-400">
-                    <p>Demo Credentials:</p>
-                    <p>admin@pickle.com / admin123</p>
-                </div>
+                <p className="text-center text-sm text-gray-500 mt-6">
+                    Use your Supabase admin credentials to log in
+                </p>
             </div>
         </div>
     );
