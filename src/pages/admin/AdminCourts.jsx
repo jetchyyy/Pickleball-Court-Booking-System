@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../../components/ui';
+import { AdminActionModal } from '../../components/admin/AdminActionModal';
 import { createCourt, deleteCourt, listCourts, subscribeToCourts } from '../../services/courts';
 
 export function AdminCourts() {
@@ -17,9 +18,20 @@ export function AdminCourts() {
         imageFiles: null
     });
 
+    const [actionModal, setActionModal] = useState({
+        isOpen: false,
+        title: '',
+        description: '',
+        action: null,
+        variant: 'primary',
+        confirmLabel: 'Confirm',
+        successTitle: 'Success!',
+        successDescription: 'Action completed successfully.'
+    });
+
     useEffect(() => {
         loadCourts();
-        
+
         // Subscribe to real-time updates
         const subscription = subscribeToCourts((payload) => {
             console.log('Court update received:', payload);
@@ -46,7 +58,7 @@ export function AdminCourts() {
     const handleImageSelect = (e) => {
         const files = e.target.files;
         setFormData({ ...formData, imageFiles: files });
-        
+
         // Show preview
         const previews = [];
         for (let i = 0; i < files.length; i++) {
@@ -85,19 +97,20 @@ export function AdminCourts() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to remove this court?')) return;
-        
-        setLoading(true);
-        try {
-            await deleteCourt(id);
-            await loadCourts();
-        } catch (err) {
-            console.error('Error deleting court:', err);
-            setError('Failed to delete court');
-        } finally {
-            setLoading(false);
-        }
+    const handleDelete = (court) => {
+        setActionModal({
+            isOpen: true,
+            title: 'Delete Court',
+            description: `Are you sure you want to remove ${court.name}? This cannot be undone.`,
+            variant: 'danger',
+            confirmLabel: 'Remove Court',
+            successTitle: 'Court Removed',
+            successDescription: 'The court has been successfully removed.',
+            action: async () => {
+                await deleteCourt(court.id);
+                await loadCourts();
+            }
+        });
     };
 
     const resetForm = () => {
@@ -213,17 +226,17 @@ export function AdminCourts() {
                             )}
 
                             <div className="flex gap-3 pt-2">
-                                <Button 
-                                    variant="ghost" 
-                                    type="button" 
-                                    className="flex-1" 
+                                <Button
+                                    variant="ghost"
+                                    type="button"
+                                    className="flex-1"
                                     onClick={resetForm}
                                     disabled={loading}
                                 >
                                     Cancel
                                 </Button>
-                                <Button 
-                                    type="submit" 
+                                <Button
+                                    type="submit"
                                     className="flex-1"
                                     disabled={loading}
                                 >
@@ -244,14 +257,14 @@ export function AdminCourts() {
                     {courts.map((court) => (
                         <Card key={court.id} className="overflow-hidden group">
                             <div className="aspect-video relative overflow-hidden bg-gray-100">
-                                <img 
-                                    src={(court.images && court.images[0]?.url) || '/images/court1.jpg'} 
-                                    alt={court.name} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                <img
+                                    src={(court.images && court.images[0]?.url) || '/images/court1.jpg'}
+                                    alt={court.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                                 <div className="absolute top-2 right-2 flex gap-1">
                                     <button
-                                        onClick={() => handleDelete(court.id)}
+                                        onClick={() => handleDelete(court)}
                                         disabled={loading}
                                         className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
                                     >
@@ -276,6 +289,18 @@ export function AdminCourts() {
                     ))}
                 </div>
             )}
+
+            <AdminActionModal
+                isOpen={actionModal.isOpen}
+                onClose={() => setActionModal(prev => ({ ...prev, isOpen: false }))}
+                title={actionModal.title}
+                description={actionModal.description}
+                action={actionModal.action}
+                variant={actionModal.variant}
+                confirmLabel={actionModal.confirmLabel}
+                successTitle={actionModal.successTitle}
+                successDescription={actionModal.successDescription}
+            />
         </div>
     );
 }

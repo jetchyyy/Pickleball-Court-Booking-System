@@ -1,7 +1,38 @@
-import { ArrowRight, Calendar, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui';
 
 export function Hero() {
+    const [currentSlide, setCurrentSlide] = useState(0);
+
+    const heroImages = [
+        {
+            src: "/images/court2.jpg",
+            title: "Center Court",
+            subtitle: "Premium Surface • Lighting"
+        },
+        {
+            src: "/images/court1.jpg",
+            title: "Pro-Grade Surface",
+            subtitle: "Optimized for Performance"
+        },
+        {
+            src: "/images/court1.jpg",
+            title: "Vibrant Community",
+            subtitle: "Join the Club"
+        }
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+
     return (
         <div className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
             {/* Background blobs */}
@@ -47,19 +78,57 @@ export function Hero() {
                         </div>
                     </div>
 
-                    <div className="relative">
-                        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform rotate-2 hover:rotate-0 transition-transform duration-500">
-                            <img
-                                src="/images/court2.jpg"
-                                alt="Pickleball Court"
-                                className="w-full h-auto object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                            <div className="absolute bottom-6 left-6 text-white">
-                                <p className="font-bold text-xl">Center Court</p>
-                                <p className="text-white/80">Premium Surface • Lighting</p>
+                    <div className="relative group">
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] transform transition-transform duration-500 hover:scale-[1.01]">
+
+                            {/* Slides */}
+                            {heroImages.map((img, index) => (
+                                <div
+                                    key={index}
+                                    className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                                >
+                                    <img
+                                        src={img.src}
+                                        alt={img.title}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent"></div>
+                                    <div className="absolute bottom-6 left-6 text-white transform transition-all duration-700 translate-y-0">
+                                        <p className="font-bold text-xl">{img.title}</p>
+                                        <p className="text-white/80 text-sm">{img.subtitle}</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Controls (visible on hover) */}
+                            <button
+                                onClick={prevSlide}
+                                className="absolute left-4 top-1/2 -translate-y-12 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <button
+                                onClick={nextSlide}
+                                className="absolute right-4 top-1/2 -translate-y-12 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+
+                            {/* Dots */}
+                            <div className="absolute bottom-6 right-6 flex gap-2">
+                                {heroImages.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setCurrentSlide(index)}
+                                        className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide ? 'w-6 bg-brand-orange' : 'bg-white/50 hover:bg-white/80'}`}
+                                        aria-label={`Go to slide ${index + 1}`}
+                                    />
+                                ))}
                             </div>
                         </div>
+
+                        {/* Decorative element behind */}
+                        <div className="absolute -inset-4 bg-brand-green/20 rounded-[2.5rem] -z-10 rotate-3 group-hover:rotate-6 transition-transform duration-500"></div>
                     </div>
                 </div>
             </div>

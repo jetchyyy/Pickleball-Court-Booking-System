@@ -1,8 +1,9 @@
 import { format } from 'date-fns';
 import { Calendar, CheckCircle, Clock, Eye, MoreVertical, Search, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Badge, Button } from '../../components/ui';
+import { Badge, Button, Pagination } from '../../components/ui';
 import { BookingDetailsModal } from '../../components/admin/BookingDetailsModal';
+import { AdminActionModal } from '../../components/admin/AdminActionModal';
 import { getAllBookings, updateBookingStatus, subscribeToBookings } from '../../services/booking';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -14,9 +15,24 @@ export function AdminBookings() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+
+    const [actionModal, setActionModal] = useState({
+        isOpen: false,
+        title: '',
+        description: '',
+        action: null,
+        variant: 'primary',
+        confirmLabel: 'Confirm',
+        successTitle: 'Success!',
+        successDescription: 'Action completed successfully.'
+    });
+
     useEffect(() => {
         loadBookings();
-        
+
         // Subscribe to real-time booking updates
         const subscription = subscribeToBookings((payload) => {
             console.log('Booking updated:', payload);
@@ -29,6 +45,11 @@ export function AdminBookings() {
             }
         };
     }, []);
+
+    // Reset pagination when search or filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus]);
 
     const loadBookings = async () => {
         try {
@@ -44,6 +65,23 @@ export function AdminBookings() {
     };
 
     const updateStatus = async (id, newStatus) => {
+        if (newStatus === 'Cancelled') {
+            setActionModal({
+                isOpen: true,
+                title: 'Cancel Booking',
+                description: 'Are you sure you want to cancel this booking? This action will notify the customer.',
+                variant: 'danger',
+                confirmLabel: 'Cancel Booking',
+                successTitle: 'Booking Cancelled',
+                successDescription: 'The booking has been successfully cancelled.',
+                action: async () => {
+                    await updateBookingStatus(id, newStatus);
+                    await loadBookings();
+                }
+            });
+            return;
+        }
+
         try {
             await updateBookingStatus(id, newStatus);
             await loadBookings();
@@ -53,20 +91,25 @@ export function AdminBookings() {
         }
     };
 
-    const deleteBooking = async (id) => {
-        if (!confirm('Are you sure you want to delete this booking?')) return;
-        try {
-            const { error } = await supabase
-                .from('bookings')
-                .delete()
-                .eq('id', id);
-            
-            if (error) throw error;
-            await loadBookings();
-        } catch (err) {
-            console.error('Error deleting booking:', err);
-            alert('Failed to delete booking');
-        }
+    const handleDeleteClick = (booking) => {
+        setActionModal({
+            isOpen: true,
+            title: 'Delete Booking',
+            description: `Are you sure you want to delete the booking for ${booking.customer_name}? This action cannot be undone.`,
+            variant: 'danger',
+            confirmLabel: 'Delete',
+            successTitle: 'Booking Deleted',
+            successDescription: 'The booking has been successfully removed from the system.',
+            action: async () => {
+                const { error } = await supabase
+                    .from('bookings')
+                    .delete()
+                    .eq('id', booking.id);
+
+                if (error) throw error;
+                await loadBookings();
+            }
+        });
     };
 
     const filteredBookings = bookings.filter(b => {
@@ -80,6 +123,12 @@ export function AdminBookings() {
         // Sort by booking date (newest first)
         return new Date(b.booking_date) - new Date(a.booking_date);
     });
+
+    // Calculate pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentBookings = filteredBookings.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -155,7 +204,7 @@ export function AdminBookings() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredBookings.map((booking) => (
+                                currentBookings.map((booking) => (
                                     <tr key={booking.id} className="hover:bg-gray-50/50">
                                         <td className="px-6 py-4">
                                             <span className="font-mono text-xs font-medium text-gray-600">{booking.id.substring(0, 8)}</span>
@@ -172,7 +221,7 @@ export function AdminBookings() {
                                                 <p className="text-sm font-medium text-gray-800">{booking.courts?.name || 'Court'}</p>
                                                 <div className="flex items-center gap-2 text-xs text-gray-500">
                                                     <span className="flex items-center gap-1">
-                                                        <Calendar size={12} /> 
+                                                        <Calendar size={12} />
                                                         {booking.booking_date ? format(new Date(booking.booking_date), 'MMM d, yyyy') : '-'}
                                                     </span>
                                                     <span className="flex items-center gap-1">
@@ -190,7 +239,7 @@ export function AdminBookings() {
                                                 <Button size="sm" variant="ghost" onClick={() => { setSelectedBooking(booking); setIsModalOpen(true); }} className="text-gray-500 hover:text-brand-green h-8 w-8 p-0 grid place-items-center" title="View Details">
                                                     <Eye size={16} />
                                                 </Button>
-                                                <Button size="sm" variant="ghost" onClick={() => deleteBooking(booking.id)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0 grid place-items-center">
+                                                <Button size="sm" variant="ghost" onClick={() => handleDeleteClick(booking)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0 grid place-items-center">
                                                     <Trash2 size={16} />
                                                 </Button>
                                             </div>
@@ -201,6 +250,15 @@ export function AdminBookings() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {!loading && filteredBookings.length > 0 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                    />
+                )}
             </div>
 
             <BookingDetailsModal
@@ -208,6 +266,18 @@ export function AdminBookings() {
                 onClose={() => setIsModalOpen(false)}
                 booking={selectedBooking}
                 onUpdateStatus={updateStatus}
+            />
+
+            <AdminActionModal
+                isOpen={actionModal.isOpen}
+                onClose={() => setActionModal(prev => ({ ...prev, isOpen: false }))}
+                title={actionModal.title}
+                description={actionModal.description}
+                action={actionModal.action}
+                variant={actionModal.variant}
+                confirmLabel={actionModal.confirmLabel}
+                successTitle={actionModal.successTitle}
+                successDescription={actionModal.successDescription}
             />
         </div>
     );

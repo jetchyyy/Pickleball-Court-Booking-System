@@ -24,7 +24,7 @@ export function Home() {
     // Load courts from Supabase
     useEffect(() => {
         loadCourts();
-        
+
         // Subscribe to court updates
         const subscription = subscribeToCourts((payload) => {
             loadCourts();
@@ -51,7 +51,7 @@ export function Home() {
     useEffect(() => {
         if (selectedCourt) {
             loadBookings();
-            
+
             // Subscribe to booking updates for this court
             const subscription = subscribeToBookings((payload) => {
                 loadBookings();
@@ -67,7 +67,7 @@ export function Home() {
 
     const loadBookings = async () => {
         if (!selectedCourt) return;
-        
+
         try {
             setLoading(true);
             const dateStr = selectedDate.toISOString().split('T')[0];
@@ -95,7 +95,7 @@ export function Home() {
         if (!courtBookings || courtBookings.length === 0) {
             return [];
         }
-        
+
         const bookedSlots = [];
         courtBookings.forEach(booking => {
             if (booking.start_time) {
@@ -113,7 +113,7 @@ export function Home() {
 
         // Define all time slots
         const timeSlots = ['08:00', '09:00', '10:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
-        
+
         // Group bookings by date
         const bookingsByDate = {};
         activeCourts.forEach(court => {
@@ -126,7 +126,7 @@ export function Home() {
         // Note: This feature requires fetching bookings for all dates, not just selected date
         // For MVP, we'll show "Fully Booked" only for dates where we have all 8 slots booked
         const bookedDates = {};
-        
+
         // We'd need to load all bookings for the court to accurately determine fully booked dates
         // This is a future enhancement - for now return empty
         return [];
@@ -138,12 +138,12 @@ export function Home() {
     const handleBookingConfirm = async (bookingData) => {
         try {
             const { createBooking, uploadProofOfPayment } = await import('../services/booking');
-            
+
             // Extract start and end times from the first time slot
             const firstTimeSlot = bookingData.times?.[0] || bookingData.time;
             let startTime = '08:00';
             let endTime = '09:00';
-            
+
             if (firstTimeSlot && typeof firstTimeSlot === 'string') {
                 if (firstTimeSlot.includes('-')) {
                     const parts = firstTimeSlot.split('-');
@@ -158,7 +158,7 @@ export function Home() {
                     endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
                 }
             }
-            
+
             // Create booking first
             const newBooking = await createBooking({
                 courtId: selectedCourt.id,
@@ -169,7 +169,7 @@ export function Home() {
                 startTime: startTime,
                 endTime: endTime,
                 totalPrice: bookingData.totalPrice || 0,
-                notes: bookingData.notes || '',
+                notes: bookingData.reference || '',
                 proofOfPaymentUrl: null
             });
 
@@ -177,11 +177,11 @@ export function Home() {
             if (bookingData.paymentProof) {
                 try {
                     const proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, newBooking.id);
-                    
+
                     if (!proofOfPaymentUrl) {
                         throw new Error('No URL returned from upload');
                     }
-                    
+
                     // Update booking with proof of payment URL
                     const { supabase } = await import('../lib/supabaseClient');
                     const { data: updateData, error: updateError } = await supabase
@@ -189,7 +189,7 @@ export function Home() {
                         .update({ proof_of_payment_url: proofOfPaymentUrl })
                         .eq('id', newBooking.id)
                         .select();
-                    
+
                     if (updateError) {
                         // Booking is still successful, just log the error
                     }
@@ -204,7 +204,7 @@ export function Home() {
         } catch (err) {
             // Reload bookings to show updated availability
             await loadBookings();
-            
+
             // Check if it's a race condition error (duplicate key constraint)
             let userFriendlyMessage = 'Failed to create booking. Please try again.';
             if (err.message && err.message.includes('unique constraint')) {
@@ -212,7 +212,7 @@ export function Home() {
             } else if (err.message) {
                 userFriendlyMessage = `Error: ${err.message}`;
             }
-            
+
             setValidationError(userFriendlyMessage);
         }
     };

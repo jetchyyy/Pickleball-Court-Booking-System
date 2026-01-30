@@ -73,7 +73,7 @@ export function Contact() {
                                 </a>
 
                                 <a
-                                    href="#"
+                                    href="https://www.instagram.com/thepicklepointcebu/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-white/20 hover:bg-white/30 rounded-full transition-colors backdrop-blur-sm"

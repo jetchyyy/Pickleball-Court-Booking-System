@@ -36,11 +36,11 @@ export async function getCourtBookings(courtId, date) {
     .eq('court_id', courtId)
     .eq('booking_date', date)
     .eq('status', 'Confirmed');
-  
+
   if (error) {
     return [];
   }
-  
+
   return data;
 }
 
@@ -74,11 +74,11 @@ export async function createBooking({
         proof_of_payment_url: proofOfPaymentUrl || null
       }])
       .select();
-    
+
     if (error) {
       throw new Error(`Booking failed: ${error.message}`);
     }
-    
+
     return data?.[0];
   } catch (err) {
     throw err;
@@ -91,11 +91,11 @@ export async function getAllBookings() {
     .from('bookings')
     .select('*, courts(name, type)')
     .order('booking_date', { ascending: false });
-  
+
   if (error) {
     return [];
   }
-  
+
   return data;
 }
 
@@ -106,9 +106,9 @@ export async function updateBookingStatus(bookingId, status) {
     .update({ status })
     .eq('id', bookingId)
     .select();
-  
+
   if (error) throw error;
-  
+
   return data?.[0];
 }
 

@@ -3,11 +3,24 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { getCurrentUser, signOut } from '../services/auth';
+import { AdminActionModal } from '../components/admin/AdminActionModal';
 
 export function AdminLayout() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const [actionModal, setActionModal] = useState({
+        isOpen: false,
+        title: '',
+        description: '',
+        action: null,
+        variant: 'primary',
+        confirmLabel: 'Confirm',
+        successTitle: 'Success!',
+        successDescription: 'Action completed successfully.',
+        onSuccess: null
+    });
 
     useEffect(() => {
         // Check if user is authenticated
@@ -30,14 +43,20 @@ export function AdminLayout() {
         checkAuth();
     }, [navigate]);
 
-    const handleLogout = async () => {
-        try {
-            await signOut();
-            navigate('/admin');
-        } catch (err) {
-            console.error('Logout error:', err);
-            alert('Failed to logout');
-        }
+    const handleLogout = () => {
+        setActionModal({
+            isOpen: true,
+            title: 'Confirm Logout',
+            description: 'Are you sure you want to sign out?',
+            variant: 'danger',
+            confirmLabel: 'Logout',
+            successTitle: 'Signed Out',
+            successDescription: 'You have been successfully logged out.',
+            action: async () => {
+                await signOut();
+            },
+            onSuccess: () => navigate('/admin')
+        });
     };
 
     if (loading) {
@@ -121,6 +140,19 @@ export function AdminLayout() {
             <main className="flex-1 md:ml-64 p-4 sm:p-8 pt-20 md:pt-8">
                 <Outlet />
             </main>
+
+            <AdminActionModal
+                isOpen={actionModal.isOpen}
+                onClose={() => setActionModal(prev => ({ ...prev, isOpen: false }))}
+                title={actionModal.title}
+                description={actionModal.description}
+                action={actionModal.action}
+                variant={actionModal.variant}
+                confirmLabel={actionModal.confirmLabel}
+                successTitle={actionModal.successTitle}
+                successDescription={actionModal.successDescription}
+                onSuccess={actionModal.onSuccess}
+            />
         </div>
     );
 }

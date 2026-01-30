@@ -1,13 +1,14 @@
-import { BarChart3, TrendingUp } from 'lucide-react';
+import { BarChart3, TrendingUp, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { subDays, format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
-import { Card } from '../../components/ui';
+import { subDays, format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Card, Button } from '../../components/ui';
 import { getAllBookings } from '../../services/booking';
 import { listCourts } from '../../services/courts';
 
 export function AdminAnalytics() {
     const [revenueData, setRevenueData] = useState([]);
     const [utilizationData, setUtilizationData] = useState([]);
+    const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -17,9 +18,11 @@ export function AdminAnalytics() {
     const loadAnalyticsData = async () => {
         try {
             setLoading(true);
-            
-            const bookings = await getAllBookings();
+
+            const bookingsData = await getAllBookings();
             const courts = await listCourts();
+
+            setBookings(bookingsData || []);
 
             // Calculate weekly revenue (last 7 days)
             const today = new Date();
@@ -29,7 +32,7 @@ export function AdminAnalytics() {
 
             const weeklyRevenue = days.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd');
-                const dayBookings = bookings?.filter(b => b.booking_date === dateStr) || [];
+                const dayBookings = bookingsData?.filter(b => b.booking_date === dateStr) || [];
                 const revenue = dayBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
                 const maxValue = 6000; // Max value for scaling bars
                 const height = (revenue / maxValue) * 100;
@@ -46,7 +49,7 @@ export function AdminAnalytics() {
             // Calculate court utilization (bookings per court / max slots per week)
             const maxSlotsPerWeek = 56; // 8 time slots × 7 days
             const courtUtilization = courts?.map(court => {
-                const courtBookings = bookings?.filter(b => b.court_id === court.id) || [];
+                const courtBookings = bookingsData?.filter(b => b.court_id === court.id) || [];
                 // Count only confirmed bookings in the current week
                 const weekBookings = courtBookings.filter(b => {
                     const bookingDate = new Date(b.booking_date);
@@ -66,6 +69,78 @@ export function AdminAnalytics() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const downloadCSV = (data, filename) => {
+        if (!data || data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+
+        const headers = Object.keys(data[0]).join(',');
+        const rows = data.map(obj => Object.values(obj).map(val => `"${val}"`).join(','));
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const generateReport = (type) => {
+        const today = new Date();
+        let reportData = [];
+        let filename = '';
+
+        if (type === 'weekly_revenue') {
+            const weekStart = startOfWeek(today);
+            const weekEnd = endOfWeek(today);
+
+            reportData = bookings.filter(b =>
+                isWithinInterval(new Date(b.booking_date), { start: weekStart, end: weekEnd })
+            ).map(b => ({
+                Date: b.booking_date,
+                Customer: b.customer_name,
+                Court: b.courts?.name,
+                Price: b.total_price,
+                Status: b.status
+            }));
+            filename = `Weekly_Revenue_${format(today, 'yyyy-MM-dd')}.csv`;
+        } else if (type === 'monthly_sales') {
+            const monthStart = startOfMonth(today);
+            const monthEnd = endOfMonth(today);
+
+            reportData = bookings.filter(b =>
+                isWithinInterval(new Date(b.booking_date), { start: monthStart, end: monthEnd })
+            ).map(b => ({
+                Date: b.booking_date,
+                Customer: b.customer_name,
+                Court: b.courts?.name,
+                Price: b.total_price,
+                Status: b.status
+            }));
+            filename = `Monthly_Sales_${format(today, 'yyyy-MM')}.csv`;
+        } else if (type === 'all_bookings') {
+            reportData = bookings.map(b => ({
+                ID: b.id,
+                Date: b.booking_date,
+                Customer: b.customer_name,
+                Email: b.customer_email,
+                Phone: b.customer_phone,
+                Court: b.courts?.name,
+                StartTime: b.start_time,
+                EndTime: b.end_time,
+                Price: b.total_price,
+                Status: b.status,
+                Notes: b.notes
+            }));
+            filename = `All_Bookings_${format(today, 'yyyy-MM-dd')}.csv`;
+        }
+
+        downloadCSV(reportData, filename);
     };
 
     return (
@@ -156,32 +231,71 @@ export function AdminAnalytics() {
                 </Card>
             </div>
 
-            {/* Generated Reports Table Mockup */}
+            {/* Generated Reports */}
             <Card className="p-0 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800">Generated Reports</h3>
+                    <p className="text-sm text-gray-500">Export booking data and insights</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Report Name</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Date Range</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Generated On</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Description</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Format</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {[1, 2, 3].map((i) => (
-                                <tr key={i} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">Monthly Sales Report</td>
-                                    <td className="px-6 py-4 text-gray-500">Jan 1 - Jan 31, 2026</td>
-                                    <td className="px-6 py-4 text-gray-500">Jan 31, 2026</td>
-                                    <td className="px-6 py-4">
-                                        <button className="text-brand-green-dark hover:underline text-sm font-medium">Download PDF</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            <tr className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium text-gray-900">Weekly Revenue</td>
+                                <td className="px-6 py-4 text-gray-500">Revenue breakdown for the current week</td>
+                                <td className="px-6 py-4 text-gray-500">CSV</td>
+                                <td className="px-6 py-4">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-brand-green-dark hover:text-brand-green hover:bg-brand-green-light"
+                                        onClick={() => generateReport('weekly_revenue')}
+                                        disabled={loading}
+                                    >
+                                        <Download size={16} className="mr-2" /> Download
+                                    </Button>
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium text-gray-900">Monthly Sales</td>
+                                <td className="px-6 py-4 text-gray-500">Sales report for the current month</td>
+                                <td className="px-6 py-4 text-gray-500">CSV</td>
+                                <td className="px-6 py-4">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-brand-green-dark hover:text-brand-green hover:bg-brand-green-light"
+                                        onClick={() => generateReport('monthly_sales')}
+                                        disabled={loading}
+                                    >
+                                        <Download size={16} className="mr-2" /> Download
+                                    </Button>
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-gray-50">
+                                <td className="px-6 py-4 font-medium text-gray-900">All Bookings</td>
+                                <td className="px-6 py-4 text-gray-500">Complete history of all bookings</td>
+                                <td className="px-6 py-4 text-gray-500">CSV</td>
+                                <td className="px-6 py-4">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-brand-green-dark hover:text-brand-green hover:bg-brand-green-light"
+                                        onClick={() => generateReport('all_bookings')}
+                                        disabled={loading}
+                                    >
+                                        <Download size={16} className="mr-2" /> Download
+                                    </Button>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

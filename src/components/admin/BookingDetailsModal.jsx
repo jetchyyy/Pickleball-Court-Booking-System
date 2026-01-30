@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X } from 'lucide-react';
+import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X, FileText } from 'lucide-react';
 import { Badge, Button } from '../ui';
 
 export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }) {
@@ -57,6 +57,14 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                         <p className="text-xs text-gray-500">Phone Number</p>
                                     </div>
                                 </div>
+                                <div className="flex items-start gap-3">
+                                    <FileText size={18} className="text-brand-green mt-0.5" />
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-sm font-mono">{booking.notes || '-'}</p>
+                                        <p className="text-xs text-gray-500">Reference Number</p>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 

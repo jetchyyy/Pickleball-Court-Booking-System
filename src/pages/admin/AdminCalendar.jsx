@@ -2,17 +2,20 @@ import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMont
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui';
-import { getAllBookings, subscribeToBookings } from '../../services/booking';
+import { getAllBookings, subscribeToBookings, updateBookingStatus } from '../../services/booking';
+import { BookingDetailsModal } from '../../components/admin/BookingDetailsModal';
 
 export function AdminCalendar() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [bookings, setBookings] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [loading, setLoading] = useState(true);
+    const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         loadBookings();
-        
+
         // Subscribe to real-time updates
         const subscription = subscribeToBookings(() => {
             loadBookings();
@@ -54,10 +57,15 @@ export function AdminCalendar() {
 
     const getBookingsForDate = (date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        return bookings.filter(b => b.booking_date === dateStr);
+        return bookings.filter(b => b.booking_date === dateStr && b.status !== 'Cancelled');
     };
 
     const selectedDayBookings = getBookingsForDate(selectedDate);
+
+    const handleBookingClick = (booking) => {
+        setSelectedBookingDetails(booking);
+        setIsModalOpen(true);
+    };
 
     return (
         <div className="space-y-6">
@@ -139,7 +147,11 @@ export function AdminCalendar() {
                                 {selectedDayBookings
                                     .sort((a, b) => a.start_time.localeCompare(b.start_time))
                                     .map((booking) => (
-                                        <div key={booking.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-brand-green/30 transition-colors">
+                                        <div
+                                            key={booking.id}
+                                            onClick={() => handleBookingClick(booking)}
+                                            className="p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-brand-green/30 hover:bg-white hover:shadow-sm cursor-pointer transition-all"
+                                        >
                                             <div className="flex justify-between items-start mb-2">
                                                 <span className="font-bold text-gray-800">{booking.start_time} - {booking.end_time}</span>
                                                 <Badge variant={booking.status === 'Confirmed' ? 'green' : booking.status === 'Cancelled' ? 'red' : 'orange'}>
@@ -151,6 +163,7 @@ export function AdminCalendar() {
                                             <p className="text-xs text-gray-400 mt-1">₱{booking.total_price}</p>
                                             <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between text-xs text-gray-400">
                                                 <span>ID: {booking.id.substring(0, 8)}</span>
+                                                <span className="text-brand-green font-medium">View Details →</span>
                                             </div>
                                         </div>
                                     ))}
@@ -164,6 +177,16 @@ export function AdminCalendar() {
                     </div>
                 </div>
             </div>
+
+            <BookingDetailsModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                booking={selectedBookingDetails}
+                onUpdateStatus={async (id, status) => {
+                    await updateBookingStatus(id, status); // Need to import this
+                    loadBookings();
+                }}
+            />
         </div>
     );
 }
