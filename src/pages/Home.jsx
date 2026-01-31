@@ -4,6 +4,8 @@ import { BookingCalendar } from '../components/BookingCalendar';
 import { BookingModal } from '../components/BookingModal';
 import { Button } from '../components/ui';
 import { Contact } from '../components/Contact';
+import { Offers } from '../components/Offers';
+import { Parking } from '../components/Parking';
 import { CourtCard } from '../components/CourtCard';
 import { Footer } from '../components/Footer';
 import { Hero } from '../components/Hero';
@@ -112,7 +114,8 @@ export function Home() {
         if (!selectedCourt || activeCourts.length === 0) return [];
 
         // Define all time slots
-        const timeSlots = ['08:00', '09:00', '10:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+        // Define all time slots (24 hours)
+        const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
         // Group bookings by date
         const bookingsByDate = {};
@@ -221,6 +224,7 @@ export function Home() {
         <div className="min-h-screen bg-bg-light font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
             <Navbar />
             <Hero />
+            <Offers />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24 pb-20">
 
@@ -310,6 +314,7 @@ export function Home() {
             </main>
 
             <Contact />
+            <Parking />
             <Footer />
 
             <BookingModal

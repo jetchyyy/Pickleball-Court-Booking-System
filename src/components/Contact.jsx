@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Mail, MapPin, Phone } from 'lucide-react';
+import { Clock, Facebook, Instagram, Mail, MapPin, Phone } from 'lucide-react';
 import { Button } from './ui';
 
 export function Contact() {
@@ -27,8 +27,19 @@ export function Contact() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 font-medium">Phone Number</p>
-                                        <p className="text-lg font-semibold text-gray-800">+63 917 123 4567</p>
-                                        <p className="text-sm text-gray-500">Mon-Sun, 8am - 10pm</p>
+                                        <p className="text-lg font-semibold text-gray-800">(0929) 119 1087</p>
+                                        <p className="text-lg font-semibold text-gray-800">(0929) 677 5914</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark">
+                                        <Clock size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-medium">Operating Hours</p>
+                                        <p className="text-lg font-semibold text-gray-800">Mon-Sun, 24 Hours</p>
+                                        <p className="text-sm text-gray-500">12AM-5AM (Advance Booking Required. No Walk-ins)</p>
                                     </div>
                                 </div>
 
@@ -38,7 +49,7 @@ export function Contact() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 font-medium">Email Address</p>
-                                        <p className="text-lg font-semibold text-gray-800">play@picklepointcebu.com</p>
+                                        <p className="text-lg font-semibold text-gray-800">thepicklepointcebu@yahoo.com</p>
                                     </div>
                                 </div>
 

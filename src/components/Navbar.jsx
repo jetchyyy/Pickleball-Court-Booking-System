@@ -21,6 +21,7 @@ export function Navbar() {
                     <div className="hidden md:block">
                         <div className="ml-10 flex items-baseline space-x-8">
                             <a href="#courts" className="font-medium hover:text-brand-orange transition-colors">Courts</a>
+                            <a href="#offers" className="font-medium hover:text-brand-orange transition-colors">Offers</a>
                             <a href="#contact" className="font-medium hover:text-brand-orange transition-colors">Contact</a>
                         </div>
                     </div>

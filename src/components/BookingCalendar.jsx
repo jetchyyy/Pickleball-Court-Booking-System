@@ -32,16 +32,17 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
-    const timeSlots = [
-        { id: '08:00', label: '08:00 AM' },
-        { id: '09:00', label: '09:00 AM' },
-        { id: '10:00', label: '10:00 AM' },
-        { id: '16:00', label: '04:00 PM' },
-        { id: '17:00', label: '05:00 PM' },
-        { id: '18:00', label: '06:00 PM' },
-        { id: '19:00', label: '07:00 PM' },
-        { id: '20:00', label: '08:00 PM' },
-    ];
+    // Generate 24-hour time slots
+    const timeSlots = Array.from({ length: 24 }, (_, i) => {
+        const hour = i.toString().padStart(2, '0');
+        const period = i < 12 ? 'AM' : 'PM';
+        const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+        const displayHourStr = displayHour.toString().padStart(2, '0');
+        return {
+            id: `${hour}:00`,
+            label: `${displayHourStr}:00 ${period}`
+        };
+    });
 
     return (
         <div className="space-y-8">
@@ -135,27 +136,57 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Select multiple</span>
                 </div>
 
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {timeSlots.map((slot) => {
-                        const isSelected = selectedTimes.includes(slot.id);
-                        const isBooked = bookedTimes.includes(slot.id);
+                <div className="space-y-6">
+                    {/* Time Sections */}
+                    {[
+                        { title: 'Morning (6AM - 11AM)', range: [6, 7, 8, 9, 10, 11] },
+                        { title: 'Afternoon (12PM - 5PM)', range: [12, 13, 14, 15, 16, 17] },
+                        { title: 'Evening (6PM - 11PM)', range: [18, 19, 20, 21, 22, 23] },
+                        { title: 'Late Night (12AM - 5AM)', range: [0, 1, 2, 3, 4, 5], note: 'Strictly no Walk-ins' },
+                    ].map((section, idx) => {
+                        // Filter slots for this section
+                        const sectionSlots = timeSlots.filter(slot => {
+                            const hour = parseInt(slot.id.split(':')[0]);
+                            return section.range.includes(hour);
+                        });
+
+                        if (sectionSlots.length === 0) return null;
+
                         return (
-                            <button
-                                key={slot.id}
-                                onClick={() => !isBooked && onTimeSelect(slot.id)}
-                                disabled={isBooked}
-                                className={cn(
-                                    'py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200',
-                                    isBooked
-                                        ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
-                                        : isSelected
-                                        ? 'bg-brand-orange text-white border-brand-orange shadow-md scale-105'
-                                        : 'bg-white border-gray-200 text-gray-600 hover:border-brand-orange hover:text-brand-orange'
-                                )}
-                                title={isBooked ? 'This time slot is already booked' : undefined}
-                            >
-                                {slot.label}
-                            </button>
+                            <div key={idx} className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                    {section.title}
+                                    {section.note && (
+                                        <span className="text-brand-orange text-xs normal-case font-bold px-2 py-0.5 bg-orange-50 rounded-full border border-orange-100">
+                                            {section.note}
+                                        </span>
+                                    )}
+                                </h4>
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                    {sectionSlots.map((slot) => {
+                                        const isSelected = selectedTimes.includes(slot.id);
+                                        const isBooked = bookedTimes.includes(slot.id);
+                                        return (
+                                            <button
+                                                key={slot.id}
+                                                onClick={() => !isBooked && onTimeSelect(slot.id)}
+                                                disabled={isBooked}
+                                                className={cn(
+                                                    'py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200',
+                                                    isBooked
+                                                        ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
+                                                        : isSelected
+                                                            ? 'bg-brand-orange text-white border-brand-orange shadow-md scale-105'
+                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-brand-orange hover:text-brand-orange'
+                                                )}
+                                                title={isBooked ? 'This time slot is already booked' : undefined}
+                                            >
+                                                {slot.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
