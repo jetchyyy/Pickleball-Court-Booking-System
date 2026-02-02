@@ -1,12 +1,14 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Power, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../../components/ui';
 import { AdminActionModal } from '../../components/admin/AdminActionModal';
-import { createCourt, deleteCourt, listCourts, subscribeToCourts } from '../../services/courts';
+import { createCourt, deleteCourt, listCourts, subscribeToCourts, updateCourt, toggleCourtStatus } from '../../services/courts';
 
 export function AdminCourts() {
     const [courts, setCourts] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingCourtId, setEditingCourtId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imagePreview, setImagePreview] = useState([]);
@@ -79,22 +81,68 @@ export function AdminCourts() {
         setError('');
 
         try {
-            await createCourt({
-                name: formData.name,
-                type: formData.type,
-                price: Number(formData.price),
-                description: formData.description,
-                imageFiles: formData.imageFiles || []
-            });
+            if (isEditMode && editingCourtId) {
+                // Update existing court
+                await updateCourt(editingCourtId, {
+                    name: formData.name,
+                    type: formData.type,
+                    price: Number(formData.price),
+                    description: formData.description,
+                    imageFiles: formData.imageFiles || []
+                });
+            } else {
+                // Create new court
+                await createCourt({
+                    name: formData.name,
+                    type: formData.type,
+                    price: Number(formData.price),
+                    description: formData.description,
+                    imageFiles: formData.imageFiles || []
+                });
+            }
 
             await loadCourts();
             resetForm();
         } catch (err) {
-            console.error('Error creating court:', err);
-            setError(err.message || 'Failed to create court');
+            console.error('Error saving court:', err);
+            setError(err.message || 'Failed to save court');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEditCourt = (court) => {
+        setIsEditMode(true);
+        setEditingCourtId(court.id);
+        setFormData({
+            name: court.name,
+            type: court.type,
+            price: court.price,
+            description: court.description || '',
+            imageFiles: null
+        });
+        setImagePreview((court.images && court.images.map(img => img.url)) || []);
+        setIsFormOpen(true);
+    };
+
+    const handleToggleStatus = (court) => {
+        const currentStatus = court.is_active !== false; // Default to active
+        const newStatus = !currentStatus;
+        setActionModal({
+            isOpen: true,
+            title: newStatus ? 'Enable Court' : 'Disable Court',
+            description: newStatus 
+                ? `Enable ${court.name}? It will be available for bookings.`
+                : `Disable ${court.name}? It will not be available for new bookings.`,
+            variant: newStatus ? 'primary' : 'warning',
+            confirmLabel: newStatus ? 'Enable' : 'Disable',
+            successTitle: newStatus ? 'Court Enabled' : 'Court Disabled',
+            successDescription: `${court.name} has been ${newStatus ? 'enabled' : 'disabled'}.`,
+            action: async () => {
+                await toggleCourtStatus(court.id, newStatus);
+                await loadCourts();
+            }
+        });
     };
 
     const handleDelete = (court) => {
@@ -115,6 +163,8 @@ export function AdminCourts() {
 
     const resetForm = () => {
         setIsFormOpen(false);
+        setIsEditMode(false);
+        setEditingCourtId(null);
         setFormData({
             name: '',
             type: 'Outdoor Hard',
@@ -147,7 +197,7 @@ export function AdminCourts() {
             {isFormOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl my-8">
-                        <h2 className="text-xl font-bold mb-4">Add New Court</h2>
+                        <h2 className="text-xl font-bold mb-4">{isEditMode ? 'Edit Court' : 'Add New Court'}</h2>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Court Name</label>
@@ -240,7 +290,7 @@ export function AdminCourts() {
                                     className="flex-1"
                                     disabled={loading}
                                 >
-                                    {loading ? 'Creating...' : 'Create Court'}
+                                    {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Court' : 'Create Court')}
                                 </Button>
                             </div>
                         </form>
@@ -254,19 +304,50 @@ export function AdminCourts() {
                 </div>
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {courts.map((court) => (
-                        <Card key={court.id} className="overflow-hidden group">
+                    {courts.map((court) => {
+                        const isActive = court.is_active !== false; // Default to active if not specified
+                        return (
+                        <Card key={court.id} className={`overflow-hidden group ${!isActive ? 'opacity-60' : ''}`}>
                             <div className="aspect-video relative overflow-hidden bg-gray-100">
                                 <img
                                     src={(court.images && court.images[0]?.url) || '/images/court1.jpg'}
                                     alt={court.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
+                                {!isActive && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <div className="flex flex-col items-center gap-2 text-white">
+                                            <AlertCircle size={28} />
+                                            <span className="font-semibold">Disabled</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="absolute top-2 right-2 flex gap-1">
+                                    <button
+                                        onClick={() => handleEditCourt(court)}
+                                        disabled={loading}
+                                        className="p-2 bg-white/90 hover:bg-blue-50 text-blue-600 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
+                                        title="Edit court"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleToggleStatus(court)}
+                                        disabled={loading}
+                                        className={`p-2 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50 ${
+                                            isActive
+                                                ? 'bg-white/90 hover:bg-red-50 text-red-500'
+                                                : 'bg-green-100/90 hover:bg-green-50 text-green-600'
+                                        }`}
+                                        title={isActive ? 'Disable court' : 'Enable court'}
+                                    >
+                                        <Power size={16} />
+                                    </button>
                                     <button
                                         onClick={() => handleDelete(court)}
                                         disabled={loading}
                                         className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
+                                        title="Delete court"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -286,7 +367,8 @@ export function AdminCourts() {
                                 )}
                             </div>
                         </Card>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 

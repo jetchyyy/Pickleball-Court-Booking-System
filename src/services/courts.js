@@ -85,6 +85,56 @@ export async function createCourt({ name, type, price, description, imageFiles }
   return data?.[0];
 }
 
+// Update court (admin only)
+export async function updateCourt(courtId, { name, type, price, description, imageFiles }) {
+  // Upload new images if provided
+  let images = undefined;
+  if (imageFiles && imageFiles.length > 0) {
+    images = await uploadCourtImages(Array.from(imageFiles));
+  }
+
+  const updateData = {
+    name,
+    type,
+    price,
+    description
+  };
+
+  // Only update images if new ones were uploaded
+  if (images) {
+    updateData.images = images;
+  }
+
+  const { data, error } = await supabase
+    .from('courts')
+    .update(updateData)
+    .eq('id', courtId)
+    .select();
+
+  if (error) {
+    console.error('updateCourt error:', error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
+// Toggle court active status (admin only)
+export async function toggleCourtStatus(courtId, isActive) {
+  const { data, error } = await supabase
+    .from('courts')
+    .update({ is_active: isActive })
+    .eq('id', courtId)
+    .select();
+
+  if (error) {
+    console.error('toggleCourtStatus error:', error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
 // Delete court (admin only)
 export async function deleteCourt(courtId) {
   const { data: court } = await supabase

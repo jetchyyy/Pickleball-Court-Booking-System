@@ -1,4 +1,4 @@
-import { startOfToday } from 'date-fns';
+import { startOfToday, format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { BookingCalendar } from '../components/BookingCalendar';
 import { BookingModal } from '../components/BookingModal';
@@ -42,8 +42,11 @@ export function Home() {
     const loadCourts = async () => {
         try {
             const courts = await listCourts();
-            setActiveCourts(courts || []);
+            // Filter out disabled courts (default is active if not specified)
+            const activeCourts = (courts || []).filter(court => court.is_active !== false);
+            setActiveCourts(activeCourts);
         } catch (err) {
+            console.error('Error loading courts:', err);
             // Fallback to empty array
             setActiveCourts([]);
         }
@@ -72,7 +75,7 @@ export function Home() {
 
         try {
             setLoading(true);
-            const dateStr = selectedDate.toISOString().split('T')[0];
+            const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const bookings = await getCourtBookings(
                 selectedCourt.id,
                 dateStr
@@ -100,10 +103,20 @@ export function Home() {
 
         const bookedSlots = [];
         courtBookings.forEach(booking => {
-            if (booking.start_time) {
+            if (booking.start_time && booking.end_time) {
                 // Normalize time format: remove seconds if present (10:00:00 -> 10:00)
-                const timeWithoutSeconds = booking.start_time.substring(0, 5);
-                bookedSlots.push(timeWithoutSeconds);
+                const startTime = booking.start_time.substring(0, 5);
+                const endTime = booking.end_time.substring(0, 5);
+
+                // Extract all hours between start_time and end_time (inclusive of start, exclusive of end)
+                const [startHour, startMin] = startTime.split(':').map(Number);
+                const [endHour, endMin] = endTime.split(':').map(Number);
+
+                // Add all hours from start to end
+                for (let hour = startHour; hour < endHour; hour++) {
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+                    bookedSlots.push(timeSlot);
+                }
             }
         });
         return bookedSlots;
@@ -142,33 +155,52 @@ export function Home() {
         try {
             const { createBooking, uploadProofOfPayment } = await import('../services/booking');
 
-            // Extract start and end times from the first time slot
-            const firstTimeSlot = bookingData.times?.[0] || bookingData.time;
-            let startTime = '08:00';
-            let endTime = '09:00';
+            // Get all selected time slots
+            const timeSlots = bookingData.times && bookingData.times.length > 0 
+                ? bookingData.times 
+                : [bookingData.time];
 
-            if (firstTimeSlot && typeof firstTimeSlot === 'string') {
-                if (firstTimeSlot.includes('-')) {
-                    const parts = firstTimeSlot.split('-');
-                    if (parts[0] && parts[1]) {
-                        startTime = parts[0].trim();
-                        endTime = parts[1].trim();
-                    }
+            if (!timeSlots || timeSlots.length === 0) {
+                throw new Error('No time slots selected');
+            }
+
+            // Sort time slots to get first and last
+            const sortedSlots = [...timeSlots].sort();
+            const firstSlot = sortedSlots[0];
+            const lastSlot = sortedSlots[sortedSlots.length - 1];
+
+            // Calculate start time from first slot
+            let startTime = '08:00';
+            if (firstSlot && typeof firstSlot === 'string') {
+                if (firstSlot.includes('-')) {
+                    startTime = firstSlot.split('-')[0].trim();
                 } else {
-                    startTime = firstTimeSlot.trim();
-                    const [hours, minutes] = startTime.split(':');
+                    startTime = firstSlot.trim();
+                }
+            }
+
+            // Calculate end time from last slot
+            let endTime = '09:00';
+            if (lastSlot && typeof lastSlot === 'string') {
+                if (lastSlot.includes('-')) {
+                    endTime = lastSlot.split('-')[1].trim();
+                } else {
+                    // If it's just a time like "10:00", add 1 hour
+                    const [hours, minutes] = lastSlot.trim().split(':');
                     const endHour = parseInt(hours) + 1;
                     endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
                 }
             }
 
-            // Create booking first
+            console.log(`Creating single booking: ${startTime} - ${endTime} for ${timeSlots.length} selected slots`);
+
+            // Create a SINGLE booking with start and end times spanning all selected slots
             const newBooking = await createBooking({
                 courtId: selectedCourt.id,
                 customerName: bookingData.name,
                 customerEmail: bookingData.email,
                 customerPhone: bookingData.phone,
-                bookingDate: selectedDate.toISOString().split('T')[0],
+                bookingDate: format(selectedDate, 'yyyy-MM-dd'),
                 startTime: startTime,
                 endTime: endTime,
                 totalPrice: bookingData.totalPrice || 0,
@@ -194,13 +226,14 @@ export function Home() {
                         .select();
 
                     if (updateError) {
-                        // Booking is still successful, just log the error
+                        console.error('Error updating booking with proof:', updateError);
                     }
                 } catch (uploadErr) {
-                    // Booking is still successful, just log the error
+                    console.error('Failed to upload proof of payment:', uploadErr);
                 }
             }
 
+            console.log("Booking Confirmed:", newBooking);
             await loadBookings();
             setSelectedTimes([]);
             setIsModalOpen(false);

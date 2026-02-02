@@ -1,18 +1,36 @@
-import { BarChart3, TrendingUp, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, Download, DollarSign, BookOpen, Calendar } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { subDays, format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { Card, Button } from '../../components/ui';
-import { getAllBookings } from '../../services/booking';
+import { getAllBookings, subscribeToBookings } from '../../services/booking';
 import { listCourts } from '../../services/courts';
 
 export function AdminAnalytics() {
     const [revenueData, setRevenueData] = useState([]);
     const [utilizationData, setUtilizationData] = useState([]);
     const [bookings, setBookings] = useState([]);
+    const [summaryStats, setSummaryStats] = useState({
+        weeklyRevenue: 0,
+        totalBookings: 0,
+        averageBookingPrice: 0,
+        monthlyRevenue: 0
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadAnalyticsData();
+
+        // Subscribe to real-time booking updates
+        const subscription = subscribeToBookings((payload) => {
+            console.log('Analytics: Booking update received', payload);
+            loadAnalyticsData();
+        });
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
 
     const loadAnalyticsData = async () => {
@@ -24,6 +42,9 @@ export function AdminAnalytics() {
 
             setBookings(bookingsData || []);
 
+            // Only process confirmed bookings
+            const confirmedBookings = (bookingsData || []).filter(b => b.status === 'Confirmed');
+
             // Calculate weekly revenue (last 7 days)
             const today = new Date();
             const weekStart = startOfWeek(today);
@@ -32,7 +53,7 @@ export function AdminAnalytics() {
 
             const weeklyRevenue = days.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd');
-                const dayBookings = bookingsData?.filter(b => b.booking_date === dateStr) || [];
+                const dayBookings = confirmedBookings.filter(b => b.booking_date === dateStr) || [];
                 const revenue = dayBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
                 const maxValue = 6000; // Max value for scaling bars
                 const height = (revenue / maxValue) * 100;
@@ -46,10 +67,20 @@ export function AdminAnalytics() {
 
             setRevenueData(weeklyRevenue);
 
+            // Calculate monthly revenue
+            const monthStart = startOfMonth(today);
+            const monthEnd = endOfMonth(today);
+            const monthlyRevenue = confirmedBookings
+                .filter(b => {
+                    const bookingDate = new Date(b.booking_date);
+                    return bookingDate >= monthStart && bookingDate <= monthEnd;
+                })
+                .reduce((sum, b) => sum + (b.total_price || 0), 0);
+
             // Calculate court utilization (bookings per court / max slots per week)
             const maxSlotsPerWeek = 56; // 8 time slots × 7 days
             const courtUtilization = courts?.map(court => {
-                const courtBookings = bookingsData?.filter(b => b.court_id === court.id) || [];
+                const courtBookings = confirmedBookings.filter(b => b.court_id === court.id) || [];
                 // Count only confirmed bookings in the current week
                 const weekBookings = courtBookings.filter(b => {
                     const bookingDate = new Date(b.booking_date);
@@ -64,6 +95,18 @@ export function AdminAnalytics() {
             }) || [];
 
             setUtilizationData(courtUtilization);
+
+            // Calculate summary stats
+            const weeklyRevenueTotal = weeklyRevenue.reduce((sum, day) => sum + day.value, 0);
+            const totalBookingsCount = confirmedBookings.length;
+            const averagePrice = totalBookingsCount > 0 ? Math.round(confirmedBookings.reduce((sum, b) => sum + (b.total_price || 0), 0) / totalBookingsCount) : 0;
+
+            setSummaryStats({
+                weeklyRevenue: weeklyRevenueTotal,
+                totalBookings: totalBookingsCount,
+                averageBookingPrice: averagePrice,
+                monthlyRevenue: monthlyRevenue
+            });
         } catch (err) {
             console.error('Error loading analytics:', err);
         } finally {
@@ -150,6 +193,61 @@ export function AdminAnalytics() {
                 <p className="text-gray-500">Performance metrics and utilization reports</p>
             </div>
 
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="p-5">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600">Weekly Revenue</p>
+                            <p className="text-3xl font-bold text-gray-900 mt-2">₱{summaryStats.weeklyRevenue.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 mt-1">Last 7 days</p>
+                        </div>
+                        <div className="p-3 bg-green-100 rounded-lg">
+                            <DollarSign size={20} className="text-green-600" />
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="p-5">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+                            <p className="text-3xl font-bold text-gray-900 mt-2">₱{summaryStats.monthlyRevenue.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 mt-1">This month</p>
+                        </div>
+                        <div className="p-3 bg-blue-100 rounded-lg">
+                            <Calendar size={20} className="text-blue-600" />
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="p-5">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                            <p className="text-3xl font-bold text-gray-900 mt-2">{summaryStats.totalBookings}</p>
+                            <p className="text-xs text-gray-400 mt-1">All confirmed</p>
+                        </div>
+                        <div className="p-3 bg-orange-100 rounded-lg">
+                            <BookOpen size={20} className="text-orange-600" />
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="p-5">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-600">Avg Booking Price</p>
+                            <p className="text-3xl font-bold text-gray-900 mt-2">₱{summaryStats.averageBookingPrice.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 mt-1">Per booking</p>
+                        </div>
+                        <div className="p-3 bg-purple-100 rounded-lg">
+                            <TrendingUp size={20} className="text-purple-600" />
+                        </div>
+                    </div>
+                </Card>
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-8">
                 {/* Revenue Chart */}
                 <Card className="p-6">
@@ -163,29 +261,36 @@ export function AdminAnalytics() {
                         </div>
                     </div>
 
-                    <div className="h-64 flex items-end justify-between gap-2">
-                        {loading ? (
-                            <div className="w-full flex items-center justify-center">
-                                <p className="text-gray-400">Loading analytics...</p>
-                            </div>
-                        ) : (
-                            revenueData.map((item) => (
-                                <div key={item.day} className="flex flex-col items-center gap-2 flex-1 group">
-                                    <div className="relative w-full flex justify-center">
+                    {loading ? (
+                        <div className="h-64 flex items-center justify-center">
+                            <p className="text-gray-400">Loading analytics...</p>
+                        </div>
+                    ) : revenueData.some(item => item.value > 0) ? (
+                        <div className="h-80 flex items-end justify-between gap-3 bg-gray-50 p-4 rounded-lg">
+                            {revenueData.map((item) => (
+                                <div key={item.day} className="flex flex-col items-center gap-3 flex-1 group">
+                                    <div className="relative w-full h-full flex flex-col justify-end items-center">
                                         <div
-                                            className="w-full max-w-[40px] bg-brand-green rounded-t-lg transition-all duration-500 hover:bg-brand-green-dark"
-                                            style={{ height: item.height }}
+                                            className="w-full bg-gradient-to-t from-brand-green to-brand-green-light rounded-t-md transition-all duration-500 hover:from-brand-green-dark hover:to-brand-green shadow-sm hover:shadow-md"
+                                            style={{ height: item.height, minHeight: '4px' }}
                                         ></div>
                                         {/* Tooltip */}
-                                        <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs py-1 px-2 rounded whitespace-nowrap">
+                                        <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs font-semibold py-2 px-3 rounded whitespace-nowrap pointer-events-none">
                                             ₱{item.value.toLocaleString()}
                                         </div>
                                     </div>
-                                    <span className="text-xs font-medium text-gray-500">{item.day}</span>
+                                    <span className="text-xs font-semibold text-gray-700">{item.day}</span>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                            <div className="text-center">
+                                <p className="text-gray-400 font-medium">No revenue data yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Bookings will appear here</p>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Court Utilization */}
