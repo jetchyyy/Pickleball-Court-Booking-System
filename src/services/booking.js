@@ -44,6 +44,22 @@ export async function getCourtBookings(courtId, date) {
   return data;
 }
 
+// Get ALL bookings for a specific date (for conflict checks)
+export async function getDailyBookings(date) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, courts(id, name, type)')
+    .eq('booking_date', date)
+    .eq('status', 'Confirmed');
+
+  if (error) {
+    console.error('getDailyBookings error:', error);
+    return [];
+  }
+
+  return data;
+}
+
 // Create booking
 export async function createBooking({
   courtId,

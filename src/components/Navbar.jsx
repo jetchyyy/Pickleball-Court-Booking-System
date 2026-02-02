@@ -14,7 +14,7 @@ export function Navbar() {
                             <span className="text-white font-bold text-lg">PP</span>
                         </div>
                         <span className="font-display font-bold text-xl tracking-tight text-brand-green-dark">
-                            Pickle Point- Cebu<span className="text-brand-orange">.</span>
+                            The Pickle Point- Cebu<span className="text-brand-orange">.</span>
                         </span>
                     </div>
 

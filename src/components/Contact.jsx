@@ -71,7 +71,7 @@ export function Contact() {
                             <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-48 h-48 bg-white/10 rounded-full"></div>
 
                             <h3 className="font-display font-bold text-xl mb-4 relative z-10">Follow Us</h3>
-                            <p className="mb-6 text-white/90 relative z-10">Stay updated on the latest tournaments and events.</p>
+                            <p className="mb-6 text-white/90 relative z-10">For private event reservations, please feel free to contact us to discuss further details.</p>
 
                             <div className="flex gap-4 relative z-10">
                                 <a

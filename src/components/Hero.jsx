@@ -7,17 +7,17 @@ export function Hero() {
 
     const heroImages = [
         {
-            src: "/images/court2.jpg",
+            src: "/images/picklepoint.jpg",
             title: "Center Court",
             subtitle: "Premium Surface • Lighting"
         },
         {
-            src: "/images/court1.jpg",
+            src: "/images/court1.JPG",
             title: "Pro-Grade Surface",
             subtitle: "Optimized for Performance"
         },
         {
-            src: "/images/court1.jpg",
+            src: "/images/court2.JPG",
             title: "Vibrant Community",
             subtitle: "Join the Club"
         }
@@ -49,7 +49,7 @@ export function Hero() {
 
                         <h1 className="text-5xl sm:text-6xl font-display font-bold leading-tight text-brand-green-dark mb-6">
                             Book your next <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-brand-green-dark">Match Point</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-brand-green-dark">Pickle Point</span>
                         </h1>
 
                         <p className="text-lg text-gray-600 mb-8 max-w-lg leading-relaxed">
@@ -69,7 +69,7 @@ export function Hero() {
                         <div className="mt-10 flex items-center gap-6 text-gray-500 text-sm font-medium">
                             <div className="flex items-center gap-2">
                                 <Users size={18} className="text-brand-orange" />
-                                <span>20+ Active Players</span>
+                                <span>50+ Active Players</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Calendar size={18} className="text-brand-orange" />

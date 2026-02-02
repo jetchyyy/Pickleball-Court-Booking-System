@@ -1,4 +1,4 @@
-import { Armchair, Car, DoorOpen, Dumbbell, Gamepad2, ShowerHead } from 'lucide-react';
+import { Armchair, Car, DoorOpen, Volleyball, Gamepad2, ShowerHead } from 'lucide-react';
 
 export function Offers() {
     return (
@@ -24,7 +24,7 @@ export function Offers() {
                     <AmenityCard icon={<ShowerHead size={32} />} title="Toilet & Changing Room" />
                     <AmenityCard icon={<Armchair size={32} />} title="Lounge Area" />
                     <AmenityCard icon={<Car size={32} />} title="Parking" />
-                    <AmenityCard icon={<Dumbbell size={32} />} title="Equipment Rental" />
+                    <AmenityCard icon={<Volleyball size={32} />} title="Ping Pong" />
                     <AmenityCard icon={<Gamepad2 size={32} />} title="Billiards" />
                 </div>
             </div>

@@ -131,7 +131,7 @@ export function AdminCourts() {
         setActionModal({
             isOpen: true,
             title: newStatus ? 'Enable Court' : 'Disable Court',
-            description: newStatus 
+            description: newStatus
                 ? `Enable ${court.name}? It will be available for bookings.`
                 : `Disable ${court.name}? It will not be available for new bookings.`,
             variant: newStatus ? 'primary' : 'warning',
@@ -222,9 +222,7 @@ export function AdminCourts() {
                                         disabled={loading}
                                     >
                                         <option>Outdoor Hard</option>
-                                        <option>Indoor Hard</option>
-                                        <option>Grass</option>
-                                        <option>Clay</option>
+                                        <option>Exclusive / Whole Court</option>
                                     </select>
                                 </div>
                                 <div>
@@ -307,66 +305,65 @@ export function AdminCourts() {
                     {courts.map((court) => {
                         const isActive = court.is_active !== false; // Default to active if not specified
                         return (
-                        <Card key={court.id} className={`overflow-hidden group ${!isActive ? 'opacity-60' : ''}`}>
-                            <div className="aspect-video relative overflow-hidden bg-gray-100">
-                                <img
-                                    src={(court.images && court.images[0]?.url) || '/images/court1.jpg'}
-                                    alt={court.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
-                                {!isActive && (
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                        <div className="flex flex-col items-center gap-2 text-white">
-                                            <AlertCircle size={28} />
-                                            <span className="font-semibold">Disabled</span>
+                            <Card key={court.id} className={`overflow-hidden group ${!isActive ? 'opacity-60' : ''}`}>
+                                <div className="aspect-video relative overflow-hidden bg-gray-100">
+                                    <img
+                                        src={(court.images && court.images[0]?.url) || '/images/court1.jpg'}
+                                        alt={court.name}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
+                                    {!isActive && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <div className="flex flex-col items-center gap-2 text-white">
+                                                <AlertCircle size={28} />
+                                                <span className="font-semibold">Disabled</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                <div className="absolute top-2 right-2 flex gap-1">
-                                    <button
-                                        onClick={() => handleEditCourt(court)}
-                                        disabled={loading}
-                                        className="p-2 bg-white/90 hover:bg-blue-50 text-blue-600 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
-                                        title="Edit court"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggleStatus(court)}
-                                        disabled={loading}
-                                        className={`p-2 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50 ${
-                                            isActive
+                                    )}
+                                    <div className="absolute top-2 right-2 flex gap-1">
+                                        <button
+                                            onClick={() => handleEditCourt(court)}
+                                            disabled={loading}
+                                            className="p-2 bg-white/90 hover:bg-blue-50 text-blue-600 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
+                                            title="Edit court"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleToggleStatus(court)}
+                                            disabled={loading}
+                                            className={`p-2 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50 ${isActive
                                                 ? 'bg-white/90 hover:bg-red-50 text-red-500'
                                                 : 'bg-green-100/90 hover:bg-green-50 text-green-600'
-                                        }`}
-                                        title={isActive ? 'Disable court' : 'Enable court'}
-                                    >
-                                        <Power size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(court)}
-                                        disabled={loading}
-                                        className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
-                                        title="Delete court"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-5">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
-                                        <p className="text-sm text-gray-500">{court.type}</p>
+                                                }`}
+                                            title={isActive ? 'Disable court' : 'Enable court'}
+                                        >
+                                            <Power size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(court)}
+                                            disabled={loading}
+                                            className="p-2 bg-white/90 hover:bg-red-50 text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors disabled:opacity-50"
+                                            title="Delete court"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
-                                    <span className="font-bold text-brand-orange">₱{court.price}</span>
                                 </div>
-                                <p className="text-sm text-gray-600 line-clamp-2">{court.description}</p>
-                                {court.images && court.images.length > 0 && (
-                                    <p className="text-xs text-gray-400 mt-2">{court.images.length} image(s)</p>
-                                )}
-                            </div>
-                        </Card>
+                                <div className="p-5">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
+                                            <p className="text-sm text-gray-500">{court.type}</p>
+                                        </div>
+                                        <span className="font-bold text-brand-orange">₱{court.price}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 line-clamp-2">{court.description}</p>
+                                    {court.images && court.images.length > 0 && (
+                                        <p className="text-xs text-gray-400 mt-2">{court.images.length} image(s)</p>
+                                    )}
+                                </div>
+                            </Card>
                         );
                     })}
                 </div>

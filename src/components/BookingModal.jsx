@@ -320,7 +320,7 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
                                         <CheckCircle size={16} /> Status: Confirmed
                                     </p>
                                     <p className="mt-2 text-gray-600">
-                                        Your booking has been confirmed. Please check your email for details and show up on time.
+                                        Your booking has been confirmed. Please contact us for any inquiries.
                                     </p>
                                 </div>
                             </div>

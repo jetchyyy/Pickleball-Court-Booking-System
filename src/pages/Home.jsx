@@ -76,10 +76,9 @@ export function Home() {
         try {
             setLoading(true);
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
-            const bookings = await getCourtBookings(
-                selectedCourt.id,
-                dateStr
-            );
+            // Fetch ALL bookings for the day to check for exclusive court conflicts
+            const { getDailyBookings } = await import('../services/booking');
+            const bookings = await getDailyBookings(dateStr);
             setCourtBookings(bookings || []);
         } catch (err) {
             setCourtBookings([]);
@@ -101,9 +100,29 @@ export function Home() {
             return [];
         }
 
-        const bookedSlots = [];
+        const bookedSlots = new Set();
+        const isExclusiveSelected = selectedCourt?.type?.includes('Exclusive') || selectedCourt?.type?.includes('Whole');
+
         courtBookings.forEach(booking => {
-            if (booking.start_time && booking.end_time) {
+            // Check for conflict
+            let isConflict = false;
+
+            // 1. Direct conflict: Same court
+            if (booking.court_id === selectedCourt.id) {
+                isConflict = true;
+            }
+            // 2. Exclusive Conflict: 
+            // If we selected an Exclusive court, ANY booking on ANY court is a conflict
+            else if (isExclusiveSelected) {
+                isConflict = true;
+            }
+            // 3. Reverse Exclusive Conflict:
+            // If we selected a normal court, but the booking is on an Exclusive court
+            else if (booking.courts?.type?.includes('Exclusive') || booking.courts?.type?.includes('Whole')) {
+                isConflict = true;
+            }
+
+            if (isConflict && booking.start_time && booking.end_time) {
                 // Normalize time format: remove seconds if present (10:00:00 -> 10:00)
                 const startTime = booking.start_time.substring(0, 5);
                 const endTime = booking.end_time.substring(0, 5);
@@ -115,11 +134,11 @@ export function Home() {
                 // Add all hours from start to end
                 for (let hour = startHour; hour < endHour; hour++) {
                     const timeSlot = `${hour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
-                    bookedSlots.push(timeSlot);
+                    bookedSlots.add(timeSlot);
                 }
             }
         });
-        return bookedSlots;
+        return Array.from(bookedSlots);
     };
 
     // Get list of fully booked dates (all time slots booked)
@@ -156,8 +175,8 @@ export function Home() {
             const { createBooking, uploadProofOfPayment } = await import('../services/booking');
 
             // Get all selected time slots
-            const timeSlots = bookingData.times && bookingData.times.length > 0 
-                ? bookingData.times 
+            const timeSlots = bookingData.times && bookingData.times.length > 0
+                ? bookingData.times
                 : [bookingData.time];
 
             if (!timeSlots || timeSlots.length === 0) {
