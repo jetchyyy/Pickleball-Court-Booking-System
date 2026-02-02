@@ -1,4 +1,4 @@
-import { Plus, Trash2, Edit2, Power, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Power, AlertCircle, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../../components/ui';
 import { AdminActionModal } from '../../components/admin/AdminActionModal';
@@ -17,7 +17,8 @@ export function AdminCourts() {
         type: 'Outdoor Hard',
         price: 350,
         description: '',
-        imageFiles: null
+        imageFiles: null,
+        pricingRules: [] // Array of { startHour, endHour, price }
     });
 
     const [actionModal, setActionModal] = useState({
@@ -88,7 +89,8 @@ export function AdminCourts() {
                     type: formData.type,
                     price: Number(formData.price),
                     description: formData.description,
-                    imageFiles: formData.imageFiles || []
+                    imageFiles: formData.imageFiles || [],
+                    pricingRules: formData.pricingRules || []
                 });
             } else {
                 // Create new court
@@ -97,7 +99,8 @@ export function AdminCourts() {
                     type: formData.type,
                     price: Number(formData.price),
                     description: formData.description,
-                    imageFiles: formData.imageFiles || []
+                    imageFiles: formData.imageFiles || [],
+                    pricingRules: formData.pricingRules || []
                 });
             }
 
@@ -119,10 +122,34 @@ export function AdminCourts() {
             type: court.type,
             price: court.price,
             description: court.description || '',
-            imageFiles: null
+            imageFiles: null,
+            pricingRules: court.pricing_rules || []
         });
         setImagePreview((court.images && court.images.map(img => img.url)) || []);
         setIsFormOpen(true);
+    };
+
+    const handleAddPricingRule = () => {
+        setFormData({
+            ...formData,
+            pricingRules: [...(formData.pricingRules || []), { startHour: 6, endHour: 15, price: 450 }]
+        });
+    };
+
+    const handleRemovePricingRule = (index) => {
+        setFormData({
+            ...formData,
+            pricingRules: formData.pricingRules.filter((_, i) => i !== index)
+        });
+    };
+
+    const handleUpdatePricingRule = (index, field, value) => {
+        const updatedRules = [...formData.pricingRules];
+        updatedRules[index] = { ...updatedRules[index], [field]: field === 'price' ? Number(value) : Number(value) };
+        setFormData({
+            ...formData,
+            pricingRules: updatedRules
+        });
     };
 
     const handleToggleStatus = (court) => {
@@ -170,7 +197,8 @@ export function AdminCourts() {
             type: 'Outdoor Hard',
             price: 350,
             description: '',
-            imageFiles: null
+            imageFiles: null,
+            pricingRules: []
         });
         setImagePreview([]);
         setError('');
@@ -272,6 +300,90 @@ export function AdminCourts() {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Pricing Rules */}
+                            <div className="border-t pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="block text-sm font-semibold text-gray-700">Time-Based Pricing (Optional)</label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleAddPricingRule}
+                                        disabled={loading}
+                                    >
+                                        <Plus size={16} className="mr-1" /> Add Rate
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-3">Set different prices for different hours (e.g., 6am-3pm: ₱450, 4pm-6am: ₱600)</p>
+
+                                {formData.pricingRules && formData.pricingRules.length > 0 ? (
+                                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                                        {formData.pricingRules.map((rule, index) => {
+                                            const formatHour12 = (hour) => {
+                                                const period = hour >= 12 ? 'PM' : 'AM';
+                                                const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+                                                return `${displayHour.toString().padStart(2, '0')}:00 ${period}`;
+                                            };
+                                            return (
+                                            <div key={index} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg">
+                                                <div className="flex-1">
+                                                    <label className="text-xs font-medium text-gray-600">Start Hour</label>
+                                                    <select
+                                                        value={rule.startHour}
+                                                        onChange={(e) => handleUpdatePricingRule(index, 'startHour', e.target.value)}
+                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                        disabled={loading}
+                                                    >
+                                                        {Array.from({ length: 24 }, (_, i) => {
+                                                            const period = i >= 12 ? 'PM' : 'AM';
+                                                            const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+                                                            return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
+                                                        })}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="text-xs font-medium text-gray-600">End Hour</label>
+                                                    <select
+                                                        value={rule.endHour}
+                                                        onChange={(e) => handleUpdatePricingRule(index, 'endHour', e.target.value)}
+                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                        disabled={loading}
+                                                    >
+                                                        {Array.from({ length: 24 }, (_, i) => {
+                                                            const period = i >= 12 ? 'PM' : 'AM';
+                                                            const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+                                                            return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
+                                                        })}
+                                                    </select>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="text-xs font-medium text-gray-600">Price (₱)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={rule.price}
+                                                        onChange={(e) => handleUpdatePricingRule(index, 'price', e.target.value)}
+                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                        disabled={loading}
+                                                        min="1"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemovePricingRule(index)}
+                                                    disabled={loading}
+                                                    className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors disabled:opacity-50"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-400 p-3 bg-gray-50 rounded text-center">No pricing rules set. Using default rate: ₱{formData.price}/hr</p>
+                                )}
+                            </div>
 
                             <div className="flex gap-3 pt-2">
                                 <Button

@@ -60,7 +60,7 @@ export async function getCourt(courtId) {
 }
 
 // Create court (admin only)
-export async function createCourt({ name, type, price, description, imageFiles }) {
+export async function createCourt({ name, type, price, description, imageFiles, pricingRules }) {
   const images = await uploadCourtImages(Array.from(imageFiles || []));
 
   const { data: user } = await supabase.auth.getUser();
@@ -73,7 +73,8 @@ export async function createCourt({ name, type, price, description, imageFiles }
       price,
       description,
       admin_id: user.user.id,
-      images // store array of { path, url }
+      images, // store array of { path, url }
+      pricing_rules: pricingRules || [] // store time-based pricing rules
     }])
     .select();
 
@@ -86,7 +87,7 @@ export async function createCourt({ name, type, price, description, imageFiles }
 }
 
 // Update court (admin only)
-export async function updateCourt(courtId, { name, type, price, description, imageFiles }) {
+export async function updateCourt(courtId, { name, type, price, description, imageFiles, pricingRules }) {
   // Upload new images if provided
   let images = undefined;
   if (imageFiles && imageFiles.length > 0) {
@@ -103,6 +104,11 @@ export async function updateCourt(courtId, { name, type, price, description, ima
   // Only update images if new ones were uploaded
   if (images) {
     updateData.images = images;
+  }
+
+  // Update pricing rules if provided
+  if (pricingRules) {
+    updateData.pricing_rules = pricingRules;
   }
 
   const { data, error } = await supabase

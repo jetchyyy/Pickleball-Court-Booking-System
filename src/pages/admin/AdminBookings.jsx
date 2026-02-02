@@ -226,7 +226,10 @@ export function AdminBookings() {
                                                     </span>
                                                     <span className="flex items-center gap-1">
                                                         <Clock size={12} />
-                                                        {booking.start_time} - {booking.end_time}
+                                                        {booking.booked_times && Array.isArray(booking.booked_times) && booking.booked_times.length > 0
+                                                            ? booking.booked_times.join(', ')
+                                                            : `${booking.start_time} - ${booking.end_time}`
+                                                        }
                                                     </span>
                                                 </div>
                                             </div>

@@ -88,6 +88,18 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                         <span>{booking.start_time} - {booking.end_time}</span>
                                     </div>
                                 </div>
+                                {booking.booked_times && booking.booked_times.length > 0 && (
+                                    <div className="pt-3 border-t border-brand-green/10">
+                                        <p className="text-xs font-semibold text-gray-600 mb-2">Booked Time Slots:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {booking.booked_times.map((time, idx) => (
+                                                <span key={idx} className="px-2.5 py-1 bg-brand-orange/20 text-brand-orange text-xs font-medium rounded-lg border border-brand-orange/30">
+                                                    {time}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="pt-2 border-t border-brand-green/10 flex justify-between items-center">
                                     <span className="text-xs text-gray-500">Total Amount</span>
                                     <span className="font-bold text-lg text-brand-orange">

@@ -96,11 +96,37 @@ export function Home() {
 
     // Get booked time slots for the selected date
     const getBookedTimes = () => {
+        const bookedSlots = new Set();
+        
+        // Block past time slots if selected date is today
+        const today = startOfToday();
+        const isToday = format(selectedDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+        
+        if (isToday) {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            // Block all time slots that have already passed
+            for (let hour = 0; hour <= currentHour; hour++) {
+                // If it's the current hour, check if we're past the start of the slot
+                if (hour === currentHour) {
+                    // Block this hour only if we're past the start (e.g., if it's 1:47 AM, block 1:00 AM)
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                    bookedSlots.add(timeSlot);
+                } else {
+                    // Block all previous hours
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                    bookedSlots.add(timeSlot);
+                }
+            }
+        }
+        
+        // Continue with existing booking conflict logic
         if (!courtBookings || courtBookings.length === 0) {
-            return [];
+            return Array.from(bookedSlots);
         }
 
-        const bookedSlots = new Set();
         const isExclusiveSelected = selectedCourt?.type?.includes('Exclusive') || selectedCourt?.type?.includes('Whole');
 
         courtBookings.forEach(booking => {
@@ -127,14 +153,22 @@ export function Home() {
                 const startTime = booking.start_time.substring(0, 5);
                 const endTime = booking.end_time.substring(0, 5);
 
-                // Extract all hours between start_time and end_time (inclusive of start, exclusive of end)
-                const [startHour, startMin] = startTime.split(':').map(Number);
-                const [endHour, endMin] = endTime.split(':').map(Number);
+                // If booking has specific booked_times array, only block those times
+                if (booking.booked_times && Array.isArray(booking.booked_times) && booking.booked_times.length > 0) {
+                    booking.booked_times.forEach(time => {
+                        const normalizedTime = time.substring(0, 5);
+                        bookedSlots.add(normalizedTime);
+                    });
+                } else {
+                    // Fallback: block all hours between start_time and end_time (legacy support)
+                    const [startHour, startMin] = startTime.split(':').map(Number);
+                    const [endHour, endMin] = endTime.split(':').map(Number);
 
-                // Add all hours from start to end
-                for (let hour = startHour; hour < endHour; hour++) {
-                    const timeSlot = `${hour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
-                    bookedSlots.add(timeSlot);
+                    // Add all hours from start to end
+                    for (let hour = startHour; hour < endHour; hour++) {
+                        const timeSlot = `${hour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+                        bookedSlots.add(timeSlot);
+                    }
                 }
             }
         });
@@ -183,7 +217,7 @@ export function Home() {
                 throw new Error('No time slots selected');
             }
 
-            // Sort time slots to get first and last
+            // Sort time slots
             const sortedSlots = [...timeSlots].sort();
             const firstSlot = sortedSlots[0];
             const lastSlot = sortedSlots[sortedSlots.length - 1];
@@ -198,22 +232,22 @@ export function Home() {
                 }
             }
 
-            // Calculate end time from last slot
+            // Calculate end time from last slot (1 hour after last slot start)
             let endTime = '09:00';
             if (lastSlot && typeof lastSlot === 'string') {
+                let lastSlotTime = lastSlot.trim();
                 if (lastSlot.includes('-')) {
-                    endTime = lastSlot.split('-')[1].trim();
-                } else {
-                    // If it's just a time like "10:00", add 1 hour
-                    const [hours, minutes] = lastSlot.trim().split(':');
-                    const endHour = parseInt(hours) + 1;
-                    endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
+                    lastSlotTime = lastSlot.split('-')[0].trim();
                 }
+                const [hours, minutes] = lastSlotTime.split(':');
+                const endHour = parseInt(hours) + 1;
+                endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
             }
 
-            console.log(`Creating single booking: ${startTime} - ${endTime} for ${timeSlots.length} selected slots`);
+            console.log(`Creating single booking: ${startTime} - ${endTime} for ${sortedSlots.length} selected slots`);
+            console.log(`Booked times: ${sortedSlots.join(', ')}`);
 
-            // Create a SINGLE booking with start and end times spanning all selected slots
+            // Create a SINGLE booking with booked_times containing the specific slots
             const newBooking = await createBooking({
                 courtId: selectedCourt.id,
                 customerName: bookingData.name,
@@ -224,7 +258,8 @@ export function Home() {
                 endTime: endTime,
                 totalPrice: bookingData.totalPrice || 0,
                 notes: bookingData.reference || '',
-                proofOfPaymentUrl: null
+                proofOfPaymentUrl: null,
+                bookedTimes: sortedSlots
             });
 
             // Try to upload proof of payment if file exists
@@ -238,7 +273,7 @@ export function Home() {
 
                     // Update booking with proof of payment URL
                     const { supabase } = await import('../lib/supabaseClient');
-                    const { data: updateData, error: updateError } = await supabase
+                    const { error: updateError } = await supabase
                         .from('bookings')
                         .update({ proof_of_payment_url: proofOfPaymentUrl })
                         .eq('id', newBooking.id)

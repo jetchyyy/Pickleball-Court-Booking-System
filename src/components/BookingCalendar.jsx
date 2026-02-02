@@ -136,6 +136,29 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Select multiple</span>
                 </div>
 
+                {/* Instruction Card */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+                    <p className="text-sm font-semibold text-blue-900">📋 How to Select Your Time Slots</p>
+                    <ul className="text-xs text-blue-800 space-y-1.5 ml-2">
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">1.</span>
+                            <span><strong>Click the time slots</strong> you want to book. Each slot is <strong>1 hour</strong> long.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">2.</span>
+                            <span>You can select <strong>multiple times</strong> - even non-consecutive hours (e.g., 7AM and 7PM).</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">3.</span>
+                            <span>Selected times appear <strong className="text-orange-600">highlighted in orange</strong>. Your total price will adjust accordingly.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">4.</span>
+                            <span>Once selected, click <strong>"Next"</strong> to proceed with your booking.</span>
+                        </li>
+                    </ul>
+                </div>
+
                 <div className="space-y-6">
                     {/* Time Sections */}
                     {[

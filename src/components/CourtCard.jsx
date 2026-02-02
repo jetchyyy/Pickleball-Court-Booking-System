@@ -1,7 +1,17 @@
-import { MapPin, Users } from 'lucide-react';
+import { MapPin, Users, DollarSign } from 'lucide-react';
 import { Badge, Button, Card } from './ui';
 
 export function CourtCard({ court, onBook }) {
+    // Format hour to 12-hour format
+    const formatHour12 = (hour) => {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+        return `${displayHour.toString().padStart(2, '0')}:00 ${period}`;
+    };
+
+    // Check if court has dynamic pricing rules
+    const hasPricingRules = court.pricing_rules && court.pricing_rules.length > 0;
+
     return (
         <Card className="group h-full flex flex-col">
             <div className="relative h-48 overflow-hidden bg-gray-100">
@@ -33,7 +43,24 @@ export function CourtCard({ court, onBook }) {
                     </div>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{court.description}</p>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{court.description}</p>
+
+                {/* Dynamic Pricing Rules Badge */}
+                {hasPricingRules && (
+                    <div className="mb-3 p-2.5 bg-brand-orange/10 border border-brand-orange/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <DollarSign size={14} className="text-brand-orange mt-0.5 flex-shrink-0" />
+                            <div className="text-xs space-y-1.5 flex-1">
+                                <p className="font-semibold text-brand-orange">Time-Based Pricing</p>
+                                {court.pricing_rules.map((rule, idx) => (
+                                    <p key={idx} className="text-gray-700">
+                                        {formatHour12(rule.startHour)} - {formatHour12(rule.endHour)}: <span className="font-bold text-brand-orange">₱{rule.price}/hr</span>
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">

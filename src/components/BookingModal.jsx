@@ -2,12 +2,26 @@ import { format } from 'date-fns';
 import { Calendar, CheckCircle, Clock, CreditCard, QrCode, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './ui';
+import { calculatePriceForSlots } from '../services/booking';
 
 export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', reference: '', paymentProof: null });
     const [errors, setErrors] = useState({});
     const [paymentMethod, setPaymentMethod] = useState('gcash');
+
+    // Calculate dynamic price based on time slots and pricing rules
+    const getDynamicPrice = () => {
+        return calculatePriceForSlots(bookingData.times || [], bookingData.court || {});
+    };
+
+    // Format time to 12-hour format
+    const formatTime12Hour = (timeStr) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+        return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+    };
 
     // Reset step when modal opens/closes
     useEffect(() => {
@@ -47,8 +61,8 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
             return;
         }
 
-        // Calculate total price based on court price and number of time slots
-        const totalPrice = (bookingData.court?.price || 0) * (bookingData.times?.length || 1);
+        // Calculate total price based on time-based pricing rules
+        const totalPrice = calculatePriceForSlots(bookingData.times || [], bookingData.court || {});
 
         onConfirm({
             ...formData,
@@ -113,13 +127,13 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
                                 <div className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-0 last:pb-0">
                                     <span className="text-gray-500 text-sm flex items-center gap-1"><Clock size={14} /> Time(s)</span>
                                     <span className="font-semibold text-gray-800 text-right max-w-[200px]">
-                                        {bookingData.times ? bookingData.times.sort().join(', ') : bookingData.time}
+                                        {bookingData.times ? bookingData.times.sort().map(t => formatTime12Hour(t)).join(', ') : formatTime12Hour(bookingData.time)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                                     <span className="text-gray-500 text-sm">Total Price ({bookingData.times?.length || 1} slots)</span>
                                     <span className="font-bold text-brand-orange text-lg">
-                                        ₱{(bookingData.court?.price || 0) * (bookingData.times?.length || 1)}
+                                        ₱{getDynamicPrice().toLocaleString()}
                                     </span>
                                 </div>
                             </div>
@@ -243,7 +257,7 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
 
                                 <p className="text-center text-sm text-gray-600 mt-4">
                                     Total Amount: <span className="font-bold text-brand-orange text-lg">
-                                        ₱{(bookingData.court?.price || 0) * (bookingData.times?.length || 1)}
+                                        ₱{getDynamicPrice().toLocaleString()}
                                     </span>
                                 </p>
                             </div>

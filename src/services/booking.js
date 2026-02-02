@@ -1,5 +1,50 @@
 import { supabase } from '../lib/supabaseClient';
 
+// Calculate price based on time-based pricing rules
+export function calculatePriceForSlots(timeSlots, court) {
+  if (!timeSlots || timeSlots.length === 0) return court.price;
+  
+  const pricingRules = court.pricing_rules || [];
+  if (pricingRules.length === 0) {
+    // No pricing rules, use default rate
+    return court.price * timeSlots.length;
+  }
+
+  let totalPrice = 0;
+  
+  for (const slot of timeSlots) {
+    // Parse slot time (e.g., "10:00" or "10:00-11:00")
+    const startTimeStr = slot.includes('-') ? slot.split('-')[0].trim() : slot.trim();
+    const [hours] = startTimeStr.split(':').map(Number);
+    
+    // Find matching pricing rule
+    let slotPrice = court.price; // Default to base price
+    for (const rule of pricingRules) {
+      const startHour = rule.startHour;
+      const endHour = rule.endHour;
+      
+      // Check if hour falls within this pricing rule
+      if (startHour <= endHour) {
+        // Normal range (e.g., 6-15)
+        if (hours >= startHour && hours < endHour) {
+          slotPrice = rule.price;
+          break;
+        }
+      } else {
+        // Wrapping range (e.g., 16-6 for 4pm-6am)
+        if (hours >= startHour || hours < endHour) {
+          slotPrice = rule.price;
+          break;
+        }
+      }
+    }
+    
+    totalPrice += slotPrice;
+  }
+  
+  return totalPrice;
+}
+
 // Upload proof of payment image
 export async function uploadProofOfPayment(file, bookingId) {
   try {
@@ -71,7 +116,8 @@ export async function createBooking({
   endTime,
   totalPrice,
   notes,
-  proofOfPaymentUrl
+  proofOfPaymentUrl,
+  bookedTimes = []
 }) {
   try {
     const { data, error } = await supabase
@@ -87,7 +133,8 @@ export async function createBooking({
         total_price: totalPrice || 0,
         status: 'Confirmed',
         notes: notes || '',
-        proof_of_payment_url: proofOfPaymentUrl || null
+        proof_of_payment_url: proofOfPaymentUrl || null,
+        booked_times: bookedTimes.length > 0 ? bookedTimes : null
       }])
       .select();
 
