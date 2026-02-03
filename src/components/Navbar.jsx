@@ -42,12 +42,12 @@ export function Navbar() {
             </div>
 
             {isOpen && (
-                <div className="md:hidden bg-white border-t border-gray-100">
+                <div className="md:hidden bg-bg-user border-t border-gray-100">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                         <a href="#" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Courts</a>
                         <a href="#" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Membership</a>
                         <a href="#" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Events</a>
-                        <Button className="w-full mt-4">Book Now</Button>
+                        <Button className="w-full mt-4 text-white">Book Now</Button>
                     </div>
                 </div>
             )}

@@ -97,16 +97,16 @@ export function Home() {
     // Get booked time slots for the selected date
     const getBookedTimes = () => {
         const bookedSlots = new Set();
-        
+
         // Block past time slots if selected date is today
         const today = startOfToday();
         const isToday = format(selectedDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-        
+
         if (isToday) {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
-            
+
             // Block all time slots that have already passed
             for (let hour = 0; hour <= currentHour; hour++) {
                 // If it's the current hour, check if we're past the start of the slot
@@ -121,7 +121,7 @@ export function Home() {
                 }
             }
         }
-        
+
         // Continue with existing booking conflict logic
         if (!courtBookings || courtBookings.length === 0) {
             return Array.from(bookedSlots);
@@ -308,7 +308,7 @@ export function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-bg-light font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
+        <div className="min-h-screen bg-bg-user font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
             <Navbar />
             <Hero />
             <Offers />
@@ -378,6 +378,7 @@ export function Home() {
                             )}
                             <Button
                                 size="lg"
+                                className="text-white"
                                 onClick={() => {
                                     setValidationError('');
                                     if (!selectedCourt) {

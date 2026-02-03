@@ -2,7 +2,7 @@ import { Armchair, Car, DoorOpen, Volleyball, Gamepad2, ShowerHead } from 'lucid
 
 export function Offers() {
     return (
-        <section id="offers" className="py-24 bg-gray-50 relative overflow-hidden">
+        <section id="offers" className="py-24 bg-bg-user relative overflow-hidden">
             {/* Background Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-brand-orange/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>

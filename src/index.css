@@ -20,6 +20,7 @@
 
   --color-bg-light: #F9F9F9;
   --color-bg-surface: #FFFFFF;
+  --color-bg-user: #E9F5DB;
 }
 
 @layer base {

@@ -59,7 +59,7 @@ export function Hero() {
                         <div className="flex flex-wrap gap-4">
                             <Button
                                 size="lg"
-                                className="shadow-brand-green/25 shadow-lg"
+                                className="shadow-brand-green/25 shadow-lg text-white"
                                 onClick={() => document.getElementById('courts')?.scrollIntoView({ behavior: 'smooth' })}
                             >
                                 Book a Court <ArrowRight size={18} />

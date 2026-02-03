@@ -326,59 +326,59 @@ export function AdminCourts() {
                                                 return `${displayHour.toString().padStart(2, '0')}:00 ${period}`;
                                             };
                                             return (
-                                            <div key={index} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg">
-                                                <div className="flex-1">
-                                                    <label className="text-xs font-medium text-gray-600">Start Hour</label>
-                                                    <select
-                                                        value={rule.startHour}
-                                                        onChange={(e) => handleUpdatePricingRule(index, 'startHour', e.target.value)}
-                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                <div key={index} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg">
+                                                    <div className="flex-1">
+                                                        <label className="text-xs font-medium text-gray-600">Start Hour</label>
+                                                        <select
+                                                            value={rule.startHour}
+                                                            onChange={(e) => handleUpdatePricingRule(index, 'startHour', e.target.value)}
+                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                            disabled={loading}
+                                                        >
+                                                            {Array.from({ length: 24 }, (_, i) => {
+                                                                const period = i >= 12 ? 'PM' : 'AM';
+                                                                const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+                                                                return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
+                                                            })}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-xs font-medium text-gray-600">End Hour</label>
+                                                        <select
+                                                            value={rule.endHour}
+                                                            onChange={(e) => handleUpdatePricingRule(index, 'endHour', e.target.value)}
+                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                            disabled={loading}
+                                                        >
+                                                            {Array.from({ length: 24 }, (_, i) => {
+                                                                const period = i >= 12 ? 'PM' : 'AM';
+                                                                const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+                                                                return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
+                                                            })}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-xs font-medium text-gray-600">Price (₱)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={rule.price}
+                                                            onChange={(e) => handleUpdatePricingRule(index, 'price', e.target.value)}
+                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
+                                                            disabled={loading}
+                                                            min="1"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemovePricingRule(index)}
                                                         disabled={loading}
+                                                        className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors disabled:opacity-50"
                                                     >
-                                                        {Array.from({ length: 24 }, (_, i) => {
-                                                            const period = i >= 12 ? 'PM' : 'AM';
-                                                            const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
-                                                            return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
-                                                        })}
-                                                    </select>
+                                                        <X size={16} />
+                                                    </button>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <label className="text-xs font-medium text-gray-600">End Hour</label>
-                                                    <select
-                                                        value={rule.endHour}
-                                                        onChange={(e) => handleUpdatePricingRule(index, 'endHour', e.target.value)}
-                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
-                                                        disabled={loading}
-                                                    >
-                                                        {Array.from({ length: 24 }, (_, i) => {
-                                                            const period = i >= 12 ? 'PM' : 'AM';
-                                                            const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
-                                                            return <option key={i} value={i}>{displayHour.toString().padStart(2, '0')}:00 {period}</option>;
-                                                        })}
-                                                    </select>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <label className="text-xs font-medium text-gray-600">Price (₱)</label>
-                                                    <input
-                                                        type="number"
-                                                        value={rule.price}
-                                                        onChange={(e) => handleUpdatePricingRule(index, 'price', e.target.value)}
-                                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-brand-green"
-                                                        disabled={loading}
-                                                        min="1"
-                                                    />
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemovePricingRule(index)}
-                                                    disabled={loading}
-                                                    className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors disabled:opacity-50"
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <p className="text-xs text-gray-400 p-3 bg-gray-50 rounded text-center">No pricing rules set. Using default rate: ₱{formData.price}/hr</p>
