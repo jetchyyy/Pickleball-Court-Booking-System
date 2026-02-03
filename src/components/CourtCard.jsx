@@ -1,178 +1,78 @@
-import { supabase } from '../lib/supabaseClient';
+import { MapPin, Users, DollarSign } from 'lucide-react';
+import { Badge, Button, Card } from './ui';
 
-// Upload images to storage
-export async function uploadCourtImages(files) {
-  const results = [];
+export function CourtCard({ court, onBook }) {
+    // Format hour to 12-hour format
+    const formatHour12 = (hour) => {
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+        return `${displayHour.toString().padStart(2, '0')}:00 ${period}`;
+    };
 
-  for (const file of files) {
-    const unique = `${Date.now()}_${file.name}`;
-    const { data, error } = await supabase.storage
-      .from('court-images')
-      .upload(unique, file);
+    // Check if court has dynamic pricing rules
+    const hasPricingRules = court.pricing_rules && court.pricing_rules.length > 0;
+    
+    // Get max players (default to 10 if not set)
+    const maxPlayers = court.max_players || 10;
 
-    if (error) {
-      console.error('Upload error:', error);
-      continue;
-    }
+    return (
+        <Card className="group h-full flex flex-col">
+            <div className="relative h-48 overflow-hidden bg-gray-100">
+                <img
+                    src={(court.images && court.images[0]?.url) || court.image || '/images/court1.jpg'}
+                    alt={court.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => { e.target.src = '/images/court1.jpg'; }}
+                />
+                <div className="absolute top-4 right-4">
+                    <Badge variant={court.status === 'Available' ? 'green' : 'gray'}>
+                        {court.status}
+                    </Badge>
+                </div>
+            </div>
 
-    const { data: urlData } = supabase.storage
-      .from('court-images')
-      .getPublicUrl(unique);
+            <div className="p-5 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 className="font-display font-bold text-lg text-brand-green-dark">{court.name}</h3>
+                        <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
+                            <MapPin size={14} />
+                            <span>{court.type} Surface</span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <span className="block font-bold text-brand-orange text-lg">₱{court.price}</span>
+                        <span className="text-xs text-gray-400">/ hour</span>
+                    </div>
+                </div>
 
-    results.push({
-      path: unique,
-      url: urlData.publicUrl
-    });
-  }
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{court.description}</p>
 
-  return results;
-}
+                {/* Dynamic Pricing Rules Badge */}
+                {hasPricingRules && (
+                    <div className="mb-3 p-2.5 bg-brand-orange/10 border border-brand-orange/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <DollarSign size={14} className="text-brand-orange mt-0.5 flex-shrink-0" />
+                            <div className="text-xs space-y-1.5 flex-1">
+                                <p className="font-semibold text-brand-orange">Time-Based Pricing</p>
+                                {court.pricing_rules.map((rule, idx) => (
+                                    <p key={idx} className="text-gray-700">
+                                        {formatHour12(rule.startHour)} - {formatHour12(rule.endHour)}: <span className="font-bold text-brand-orange">₱{rule.price}/hr</span>
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-// List all courts
-export async function listCourts() {
-  const { data, error } = await supabase
-    .from('courts')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('listCourts error:', error);
-    return [];
-  }
-
-  return data;
-}
-
-// Get single court with bookings
-export async function getCourt(courtId) {
-  const { data, error } = await supabase
-    .from('courts')
-    .select('*, bookings(*)')
-    .eq('id', courtId)
-    .single();
-
-  if (error) {
-    console.error('getCourt error:', error);
-    return null;
-  }
-
-  return data;
-}
-
-// Create court (admin only)
-export async function createCourt({ name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
-  const images = await uploadCourtImages(Array.from(imageFiles || []));
-
-  const { data: user } = await supabase.auth.getUser();
-
-  const { data, error } = await supabase
-    .from('courts')
-    .insert([{
-      name,
-      type,
-      price,
-      description,
-      admin_id: user.user.id,
-      images, // store array of { path, url }
-      pricing_rules: pricingRules || [], // store time-based pricing rules
-      max_players: maxPlayers || 10 // store max players capacity
-    }])
-    .select();
-
-  if (error) {
-    console.error('createCourt error:', error);
-    throw error;
-  }
-
-  return data?.[0];
-}
-
-// Update court (admin only)
-export async function updateCourt(courtId, { name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
-  // Upload new images if provided
-  let images = undefined;
-  if (imageFiles && imageFiles.length > 0) {
-    images = await uploadCourtImages(Array.from(imageFiles));
-  }
-
-  const updateData = {
-    name,
-    type,
-    price,
-    description
-  };
-
-  // Only update images if new ones were uploaded
-  if (images) {
-    updateData.images = images;
-  }
-
-  // Update pricing rules if provided
-  if (pricingRules) {
-    updateData.pricing_rules = pricingRules;
-  }
-
-  // Update max players if provided
-  if (maxPlayers !== undefined) {
-    updateData.max_players = maxPlayers;
-  }
-
-  const { data, error } = await supabase
-    .from('courts')
-    .update(updateData)
-    .eq('id', courtId)
-    .select();
-
-  if (error) {
-    console.error('updateCourt error:', error);
-    throw error;
-  }
-
-  return data?.[0];
-}
-
-// Toggle court active status (admin only)
-export async function toggleCourtStatus(courtId, isActive) {
-  const { data, error } = await supabase
-    .from('courts')
-    .update({ is_active: isActive })
-    .eq('id', courtId)
-    .select();
-
-  if (error) {
-    console.error('toggleCourtStatus error:', error);
-    throw error;
-  }
-
-  return data?.[0];
-}
-
-// Delete court (admin only)
-export async function deleteCourt(courtId) {
-  const { data: court } = await supabase
-    .from('courts')
-    .select('images')
-    .eq('id', courtId)
-    .single();
-
-  // Delete images from storage
-  if (court?.images?.length) {
-    const paths = court.images.map(img => img.path);
-    await supabase.storage.from('court-images').remove(paths);
-  }
-
-  const { error } = await supabase
-    .from('courts')
-    .delete()
-    .eq('id', courtId);
-
-  if (error) throw error;
-}
-
-// Subscribe to court changes (real-time)
-export function subscribeToCourts(callback) {
-  return supabase
-    .channel('courts')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'courts' }, callback)
-    .subscribe();
+                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                        <Users size={14} className="text-brand-green" />
+                        Up to {maxPlayers} player{maxPlayers !== 1 ? 's' : ''}
+                    </div>
+                    <Button variant="primary" size="sm" onClick={() => onBook(court)}>Book Now</Button>
+                </div>
+            </div>
+        </Card>
+    );
 }
