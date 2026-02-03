@@ -1,48 +1,178 @@
-import { MapPin, Users } from 'lucide-react';
-import { Badge, Button, Card } from './ui';
+import { supabase } from '../lib/supabaseClient';
 
-export function CourtCard({ court, onBook }) {
-    return (
-        <Card className="group h-full flex flex-col">
-            <div className="relative h-48 overflow-hidden bg-gray-100">
-                <img
-                    src={(court.images && court.images[0]?.url) || court.image || '/images/court1.jpg'}
-                    alt={court.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    onError={(e) => { e.target.src = '/images/court1.jpg'; }}
-                />
-                <div className="absolute top-4 right-4">
-                    <Badge variant={court.status === 'Available' ? 'green' : 'gray'}>
-                        {court.status}
-                    </Badge>
-                </div>
-            </div>
+// Upload images to storage
+export async function uploadCourtImages(files) {
+  const results = [];
 
-            <div className="p-5 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 className="font-display font-bold text-lg text-brand-green-dark">{court.name}</h3>
-                        <div className="flex items-center gap-1 text-gray-500 text-sm mt-1">
-                            <MapPin size={14} />
-                            <span>{court.type} Surface</span>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <span className="block font-bold text-brand-orange text-lg">₱{court.price}</span>
-                        <span className="text-xs text-gray-400">/ hour</span>
-                    </div>
-                </div>
+  for (const file of files) {
+    const unique = `${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage
+      .from('court-images')
+      .upload(unique, file);
 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{court.description}</p>
+    if (error) {
+      console.error('Upload error:', error);
+      continue;
+    }
 
-                <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
-                        <Users size={14} className="text-brand-green" />
-                        Up to {court.capacity || 10} players
-                    </div>
-                    <Button variant="primary" size="sm" onClick={() => onBook(court)} className="text-white">Book Now</Button>
-                </div>
-            </div>
-        </Card>
-    );
+    const { data: urlData } = supabase.storage
+      .from('court-images')
+      .getPublicUrl(unique);
+
+    results.push({
+      path: unique,
+      url: urlData.publicUrl
+    });
+  }
+
+  return results;
+}
+
+// List all courts
+export async function listCourts() {
+  const { data, error } = await supabase
+    .from('courts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('listCourts error:', error);
+    return [];
+  }
+
+  return data;
+}
+
+// Get single court with bookings
+export async function getCourt(courtId) {
+  const { data, error } = await supabase
+    .from('courts')
+    .select('*, bookings(*)')
+    .eq('id', courtId)
+    .single();
+
+  if (error) {
+    console.error('getCourt error:', error);
+    return null;
+  }
+
+  return data;
+}
+
+// Create court (admin only)
+export async function createCourt({ name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
+  const images = await uploadCourtImages(Array.from(imageFiles || []));
+
+  const { data: user } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from('courts')
+    .insert([{
+      name,
+      type,
+      price,
+      description,
+      admin_id: user.user.id,
+      images, // store array of { path, url }
+      pricing_rules: pricingRules || [], // store time-based pricing rules
+      max_players: maxPlayers || 10 // store max players capacity
+    }])
+    .select();
+
+  if (error) {
+    console.error('createCourt error:', error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
+// Update court (admin only)
+export async function updateCourt(courtId, { name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
+  // Upload new images if provided
+  let images = undefined;
+  if (imageFiles && imageFiles.length > 0) {
+    images = await uploadCourtImages(Array.from(imageFiles));
+  }
+
+  const updateData = {
+    name,
+    type,
+    price,
+    description
+  };
+
+  // Only update images if new ones were uploaded
+  if (images) {
+    updateData.images = images;
+  }
+
+  // Update pricing rules if provided
+  if (pricingRules) {
+    updateData.pricing_rules = pricingRules;
+  }
+
+  // Update max players if provided
+  if (maxPlayers !== undefined) {
+    updateData.max_players = maxPlayers;
+  }
+
+  const { data, error } = await supabase
+    .from('courts')
+    .update(updateData)
+    .eq('id', courtId)
+    .select();
+
+  if (error) {
+    console.error('updateCourt error:', error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
+// Toggle court active status (admin only)
+export async function toggleCourtStatus(courtId, isActive) {
+  const { data, error } = await supabase
+    .from('courts')
+    .update({ is_active: isActive })
+    .eq('id', courtId)
+    .select();
+
+  if (error) {
+    console.error('toggleCourtStatus error:', error);
+    throw error;
+  }
+
+  return data?.[0];
+}
+
+// Delete court (admin only)
+export async function deleteCourt(courtId) {
+  const { data: court } = await supabase
+    .from('courts')
+    .select('images')
+    .eq('id', courtId)
+    .single();
+
+  // Delete images from storage
+  if (court?.images?.length) {
+    const paths = court.images.map(img => img.path);
+    await supabase.storage.from('court-images').remove(paths);
+  }
+
+  const { error } = await supabase
+    .from('courts')
+    .delete()
+    .eq('id', courtId);
+
+  if (error) throw error;
+}
+
+// Subscribe to court changes (real-time)
+export function subscribeToCourts(callback) {
+  return supabase
+    .channel('courts')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'courts' }, callback)
+    .subscribe();
 }

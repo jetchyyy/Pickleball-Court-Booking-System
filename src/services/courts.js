@@ -60,7 +60,7 @@ export async function getCourt(courtId) {
 }
 
 // Create court (admin only)
-export async function createCourt({ name, type, price, description, imageFiles, pricingRules, capacity }) {
+export async function createCourt({ name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
   const images = await uploadCourtImages(Array.from(imageFiles || []));
 
   const { data: user } = await supabase.auth.getUser();
@@ -75,7 +75,7 @@ export async function createCourt({ name, type, price, description, imageFiles, 
       admin_id: user.user.id,
       images, // store array of { path, url }
       pricing_rules: pricingRules || [], // store time-based pricing rules
-      capacity: Number(capacity) || 10
+      max_players: maxPlayers || 10 // store max players capacity
     }])
     .select();
 
@@ -88,7 +88,7 @@ export async function createCourt({ name, type, price, description, imageFiles, 
 }
 
 // Update court (admin only)
-export async function updateCourt(courtId, { name, type, price, description, imageFiles, pricingRules, capacity }) {
+export async function updateCourt(courtId, { name, type, price, description, imageFiles, pricingRules, maxPlayers }) {
   // Upload new images if provided
   let images = undefined;
   if (imageFiles && imageFiles.length > 0) {
@@ -99,8 +99,7 @@ export async function updateCourt(courtId, { name, type, price, description, ima
     name,
     type,
     price,
-    description,
-    capacity: Number(capacity) || 10
+    description
   };
 
   // Only update images if new ones were uploaded
@@ -111,6 +110,11 @@ export async function updateCourt(courtId, { name, type, price, description, ima
   // Update pricing rules if provided
   if (pricingRules) {
     updateData.pricing_rules = pricingRules;
+  }
+
+  // Update max players if provided
+  if (maxPlayers !== undefined) {
+    updateData.max_players = maxPlayers;
   }
 
   const { data, error } = await supabase

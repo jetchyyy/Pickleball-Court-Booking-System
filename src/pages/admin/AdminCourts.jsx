@@ -18,7 +18,8 @@ export function AdminCourts() {
         price: 350,
         description: '',
         imageFiles: null,
-        pricingRules: [] // Array of { startHour, endHour, price }
+        pricingRules: [], // Array of { startHour, endHour, price }
+        maxPlayers: 10 // Default to 10 players
     });
 
     const [actionModal, setActionModal] = useState({
@@ -90,7 +91,8 @@ export function AdminCourts() {
                     price: Number(formData.price),
                     description: formData.description,
                     imageFiles: formData.imageFiles || [],
-                    pricingRules: formData.pricingRules || []
+                    pricingRules: formData.pricingRules || [],
+                    maxPlayers: Number(formData.maxPlayers) || 10
                 });
             } else {
                 // Create new court
@@ -100,7 +102,8 @@ export function AdminCourts() {
                     price: Number(formData.price),
                     description: formData.description,
                     imageFiles: formData.imageFiles || [],
-                    pricingRules: formData.pricingRules || []
+                    pricingRules: formData.pricingRules || [],
+                    maxPlayers: Number(formData.maxPlayers) || 10
                 });
             }
 
@@ -123,7 +126,8 @@ export function AdminCourts() {
             price: court.price,
             description: court.description || '',
             imageFiles: null,
-            pricingRules: court.pricing_rules || []
+            pricingRules: court.pricing_rules || [],
+            maxPlayers: court.max_players || 10
         });
         setImagePreview((court.images && court.images.map(img => img.url)) || []);
         setIsFormOpen(true);
@@ -198,7 +202,8 @@ export function AdminCourts() {
             price: 350,
             description: '',
             imageFiles: null,
-            pricingRules: []
+            pricingRules: [],
+            maxPlayers: 10
         });
         setImagePreview([]);
         setError('');
@@ -264,6 +269,22 @@ export function AdminCourts() {
                                         disabled={loading}
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Max Players</label>
+                                <input
+                                    required
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    value={formData.maxPlayers}
+                                    onChange={e => setFormData({ ...formData, maxPlayers: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
+                                    placeholder="e.g. 10"
+                                    disabled={loading}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Maximum number of players this court can accommodate</p>
                             </div>
 
                             <div>
@@ -474,6 +495,7 @@ export function AdminCourts() {
                                     {court.images && court.images.length > 0 && (
                                         <p className="text-xs text-gray-400 mt-2">{court.images.length} image(s)</p>
                                     )}
+                                    <p className="text-xs text-gray-500 mt-1">Max {court.max_players || 10} players</p>
                                 </div>
                             </Card>
                         );
