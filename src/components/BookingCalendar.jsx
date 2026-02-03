@@ -49,15 +49,15 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
             {/* Legend */}
             <div className="flex flex-wrap gap-4 items-center text-sm px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
                 <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-white border border-brand-green"></div>
+                    <div className="w-4 h-4 rounded-full bg-white border-2 border-brand-green"></div>
                     <span className="text-gray-700">Available</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-brand-orange/30 border border-brand-orange"></div>
+                    <div className="w-4 h-4 rounded-full bg-brand-orange/30 border-2 border-brand-orange"></div>
                     <span className="text-gray-700">Partially Booked</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-red-100 border border-red-400"></div>
+                    <div className="w-4 h-4 rounded-full bg-red-100 border-2 border-red-400"></div>
                     <span className="text-gray-700">Fully Booked</span>
                 </div>
             </div>
@@ -71,14 +71,14 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                     <div className="flex gap-2">
                         <button
                             onClick={prevMonth}
-                            disabled={isBefore(subMonths(currentMonth, 1), startOfMonth(today))} // Prevent going back past current month context roughly
-                            className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                            disabled={isBefore(subMonths(currentMonth, 1), startOfMonth(today))}
+                            className="p-1.5 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                         >
                             <ChevronLeft size={20} className="text-gray-600" />
                         </button>
                         <button
                             onClick={nextMonth}
-                            className="p-1.5 rounded-full hover:bg-gray-100"
+                            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
                         >
                             <ChevronRight size={20} className="text-gray-600" />
                         </button>
@@ -102,22 +102,34 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                         const isSelected = isSameDay(day, selectedDate);
                         const isPast = isBefore(day, today);
                         const isTodayDate = isSameDay(day, today);
-                        const isFullyBooked = fullyBookedDates.some(d => isSameDay(d, day));
+                        
+                        // Check if this day has a booking status
+                        const dateStr = format(day, 'yyyy-MM-dd');
+                        const dateStatus = fullyBookedDates.find(d => d.date === dateStr);
+                        const isFullyBooked = dateStatus?.status === 'fully-booked';
+                        const isPartiallyBooked = dateStatus?.status === 'partially-booked';
 
                         return (
                             <div key={day.toString()} className="flex justify-center relative">
                                 <button
-                                    onClick={() => !isPast && onDateSelect(day)}
-                                    disabled={isPast}
+                                    onClick={() => !isPast && !isFullyBooked && onDateSelect(day)}
+                                    disabled={isPast || isFullyBooked}
                                     className={cn(
                                         'h-10 w-10 rounded-full flex items-center justify-center text-sm transition-all duration-200 relative',
-                                        isSelected && 'bg-brand-green text-brand-green-dark font-bold shadow-md',
+                                        isSelected && 'bg-brand-green text-white font-bold shadow-md ring-2 ring-brand-green ring-offset-2',
                                         !isSelected && isPast && 'text-gray-300 cursor-not-allowed',
-                                        !isSelected && !isPast && isFullyBooked && 'bg-red-100 border-2 border-red-400 text-red-600 font-semibold cursor-not-allowed hover:bg-red-100',
-                                        !isSelected && !isPast && !isFullyBooked && 'hover:bg-brand-green/20 text-gray-700',
-                                        !isSelected && isTodayDate && !isFullyBooked && 'border border-brand-green text-brand-green font-semibold',
+                                        !isSelected && !isPast && isFullyBooked && 'bg-red-100 border-2 border-red-400 text-red-600 font-semibold cursor-not-allowed',
+                                        !isSelected && !isPast && isPartiallyBooked && 'bg-brand-orange/30 border-2 border-brand-orange text-gray-700 hover:bg-brand-orange/40',
+                                        !isSelected && !isPast && !isFullyBooked && !isPartiallyBooked && 'hover:bg-brand-green/20 text-gray-700 border border-transparent hover:border-brand-green',
+                                        !isSelected && isTodayDate && !isFullyBooked && 'border-2 border-brand-green text-brand-green font-semibold',
                                     )}
-                                    title={isFullyBooked ? 'All time slots are booked for this date' : undefined}
+                                    title={
+                                        isFullyBooked 
+                                            ? 'All time slots are booked for this date' 
+                                            : isPartiallyBooked 
+                                                ? 'Some time slots are booked for this date'
+                                                : undefined
+                                    }
                                 >
                                     {format(day, 'd')}
                                 </button>

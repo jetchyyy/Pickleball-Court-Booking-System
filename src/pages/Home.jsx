@@ -29,6 +29,8 @@ export function Home() {
 
         // Subscribe to court updates
         const subscription = subscribeToCourts((payload) => {
+            console.log('Court status changed:', payload);
+            // Reload courts immediately when any change occurs
             loadCourts();
         });
 
@@ -41,10 +43,11 @@ export function Home() {
 
     const loadCourts = async () => {
         try {
+            console.log('Loading courts...');
             const courts = await listCourts();
-            // Filter out disabled courts (default is active if not specified)
-            const activeCourts = (courts || []).filter(court => court.is_active !== false);
-            setActiveCourts(activeCourts);
+            console.log('Courts loaded:', courts);
+            // Show all courts (including disabled ones)
+            setActiveCourts(courts || []);
         } catch (err) {
             console.error('Error loading courts:', err);
             // Fallback to empty array
@@ -56,10 +59,12 @@ export function Home() {
     useEffect(() => {
         if (selectedCourt) {
             loadBookings();
+            loadMonthlyBookings(); // Load bookings for entire month for legend
 
             // Subscribe to booking updates for this court
             const subscription = subscribeToBookings((payload) => {
                 loadBookings();
+                loadMonthlyBookings();
             });
 
             return () => {
@@ -87,7 +92,45 @@ export function Home() {
         }
     };
 
+    // Load bookings for the entire month to calculate legend
+    const [monthlyBookings, setMonthlyBookings] = useState([]);
+    
+    const loadMonthlyBookings = async () => {
+        if (!selectedCourt) return;
+
+        try {
+            // Get bookings for the current month
+            const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+            const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+            
+            const { supabase } = await import('../lib/supabaseClient');
+            const { data, error } = await supabase
+                .from('bookings')
+                .select('*, courts(id, name, type)')
+                .gte('booking_date', format(startOfMonth, 'yyyy-MM-dd'))
+                .lte('booking_date', format(endOfMonth, 'yyyy-MM-dd'))
+                .eq('status', 'Confirmed');
+
+            if (error) {
+                console.error('Error loading monthly bookings:', error);
+                setMonthlyBookings([]);
+            } else {
+                setMonthlyBookings(data || []);
+            }
+        } catch (err) {
+            console.error('Error loading monthly bookings:', err);
+            setMonthlyBookings([]);
+        }
+    };
+
     const handleBookClick = (court) => {
+        // Check if court is active
+        const isActive = court.is_active !== false;
+        if (!isActive) {
+            setValidationError("⚠️ This court is currently unavailable for booking.");
+            return;
+        }
+        
         setSelectedCourt(court);
         setValidationError('');
         // Scroll to calendar section
@@ -97,16 +140,16 @@ export function Home() {
     // Get booked time slots for the selected date
     const getBookedTimes = () => {
         const bookedSlots = new Set();
-
+        
         // Block past time slots if selected date is today
         const today = startOfToday();
         const isToday = format(selectedDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-
+        
         if (isToday) {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
-
+            
             // Block all time slots that have already passed
             for (let hour = 0; hour <= currentHour; hour++) {
                 // If it's the current hour, check if we're past the start of the slot
@@ -121,7 +164,7 @@ export function Home() {
                 }
             }
         }
-
+        
         // Continue with existing booking conflict logic
         if (!courtBookings || courtBookings.length === 0) {
             return Array.from(bookedSlots);
@@ -175,30 +218,79 @@ export function Home() {
         return Array.from(bookedSlots);
     };
 
-    // Get list of fully booked dates (all time slots booked)
+    // Get list of fully booked and partially booked dates
     const getFullyBookedDates = () => {
-        if (!selectedCourt || activeCourts.length === 0) return [];
+        if (!selectedCourt || !monthlyBookings || monthlyBookings.length === 0) return [];
 
-        // Define all time slots
+        const isExclusiveSelected = selectedCourt?.type?.includes('Exclusive') || selectedCourt?.type?.includes('Whole');
+        
         // Define all time slots (24 hours)
-        const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        const allTimeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        const totalSlots = allTimeSlots.length;
 
         // Group bookings by date
         const bookingsByDate = {};
-        activeCourts.forEach(court => {
-            if (court.id === selectedCourt.id) {
-                // This will be populated as we load bookings for different dates
-                // For now, just return empty for simplicity
+
+        monthlyBookings.forEach(booking => {
+            const bookingDate = booking.booking_date;
+            
+            // Check if this booking conflicts with selected court
+            let isConflict = false;
+
+            // 1. Direct conflict: Same court
+            if (booking.court_id === selectedCourt.id) {
+                isConflict = true;
+            }
+            // 2. Exclusive Conflict
+            else if (isExclusiveSelected) {
+                isConflict = true;
+            }
+            // 3. Reverse Exclusive Conflict
+            else if (booking.courts?.type?.includes('Exclusive') || booking.courts?.type?.includes('Whole')) {
+                isConflict = true;
+            }
+
+            if (!isConflict) return;
+
+            if (!bookingsByDate[bookingDate]) {
+                bookingsByDate[bookingDate] = new Set();
+            }
+
+            // Add booked times to the set
+            if (booking.booked_times && Array.isArray(booking.booked_times) && booking.booked_times.length > 0) {
+                booking.booked_times.forEach(time => {
+                    const normalizedTime = time.substring(0, 5);
+                    bookingsByDate[bookingDate].add(normalizedTime);
+                });
+            } else if (booking.start_time && booking.end_time) {
+                // Fallback: use start_time and end_time
+                const startTime = booking.start_time.substring(0, 5);
+                const endTime = booking.end_time.substring(0, 5);
+                const [startHour, startMin] = startTime.split(':').map(Number);
+                const [endHour, endMin] = endTime.split(':').map(Number);
+
+                for (let hour = startHour; hour < endHour; hour++) {
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+                    bookingsByDate[bookingDate].add(timeSlot);
+                }
             }
         });
 
-        // Note: This feature requires fetching bookings for all dates, not just selected date
-        // For MVP, we'll show "Fully Booked" only for dates where we have all 8 slots booked
-        const bookedDates = {};
+        // Determine status for each date
+        const dateStatuses = [];
+        Object.keys(bookingsByDate).forEach(date => {
+            const bookedSlotsCount = bookingsByDate[date].size;
+            
+            if (bookedSlotsCount >= totalSlots) {
+                // Fully booked
+                dateStatuses.push({ date, status: 'fully-booked' });
+            } else if (bookedSlotsCount > 0) {
+                // Partially booked
+                dateStatuses.push({ date, status: 'partially-booked' });
+            }
+        });
 
-        // We'd need to load all bookings for the court to accurately determine fully booked dates
-        // This is a future enhancement - for now return empty
-        return [];
+        return dateStatuses;
     };
 
     const bookedTimes = getBookedTimes();
@@ -247,7 +339,27 @@ export function Home() {
             console.log(`Creating single booking: ${startTime} - ${endTime} for ${sortedSlots.length} selected slots`);
             console.log(`Booked times: ${sortedSlots.join(', ')}`);
 
+            // Upload proof of payment FIRST if file exists
+            let proofOfPaymentUrl = null;
+            if (bookingData.paymentProof) {
+                try {
+                    console.log('Uploading proof of payment...');
+                    // Use a temporary ID for upload (we'll use the actual booking ID after creation)
+                    const tempId = `temp-${Date.now()}`;
+                    proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, tempId);
+                    
+                    if (!proofOfPaymentUrl) {
+                        throw new Error('Failed to get upload URL');
+                    }
+                    console.log('Proof of payment uploaded successfully:', proofOfPaymentUrl);
+                } catch (uploadErr) {
+                    console.error('Failed to upload proof of payment:', uploadErr);
+                    throw new Error('Failed to upload proof of payment. Please try again.');
+                }
+            }
+
             // Create a SINGLE booking with booked_times containing the specific slots
+            // and the proof of payment URL already included
             const newBooking = await createBooking({
                 courtId: selectedCourt.id,
                 customerName: bookingData.name,
@@ -258,34 +370,9 @@ export function Home() {
                 endTime: endTime,
                 totalPrice: bookingData.totalPrice || 0,
                 notes: bookingData.reference || '',
-                proofOfPaymentUrl: null,
+                proofOfPaymentUrl: proofOfPaymentUrl,
                 bookedTimes: sortedSlots
             });
-
-            // Try to upload proof of payment if file exists
-            if (bookingData.paymentProof) {
-                try {
-                    const proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, newBooking.id);
-
-                    if (!proofOfPaymentUrl) {
-                        throw new Error('No URL returned from upload');
-                    }
-
-                    // Update booking with proof of payment URL
-                    const { supabase } = await import('../lib/supabaseClient');
-                    const { error: updateError } = await supabase
-                        .from('bookings')
-                        .update({ proof_of_payment_url: proofOfPaymentUrl })
-                        .eq('id', newBooking.id)
-                        .select();
-
-                    if (updateError) {
-                        console.error('Error updating booking with proof:', updateError);
-                    }
-                } catch (uploadErr) {
-                    console.error('Failed to upload proof of payment:', uploadErr);
-                }
-            }
 
             console.log("Booking Confirmed:", newBooking);
             await loadBookings();
@@ -308,7 +395,7 @@ export function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-bg-user font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
+        <div className="min-h-screen bg-bg-light font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
             <Navbar />
             <Hero />
             <Offers />
@@ -378,7 +465,6 @@ export function Home() {
                             )}
                             <Button
                                 size="lg"
-                                className="text-white"
                                 onClick={() => {
                                     setValidationError('');
                                     if (!selectedCourt) {

@@ -14,21 +14,34 @@ export function CourtCard({ court, onBook }) {
     
     // Get max players (default to 10 if not set)
     const maxPlayers = court.max_players || 10;
+    
+    // Check if court is active (default to true if not specified)
+    const isActive = court.is_active !== false;
+    
+    // Debug logging
+    console.log(`Court ${court.name}: is_active=${court.is_active}, computed isActive=${isActive}`);
 
     return (
-        <Card className="group h-full flex flex-col">
+        <Card className={`group h-full flex flex-col ${!isActive ? 'opacity-75' : ''}`}>
             <div className="relative h-48 overflow-hidden bg-gray-100">
                 <img
                     src={(court.images && court.images[0]?.url) || court.image || '/images/court1.jpg'}
                     alt={court.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className={`w-full h-full object-cover transition-transform duration-500 ${isActive ? 'group-hover:scale-110' : 'grayscale'}`}
                     onError={(e) => { e.target.src = '/images/court1.jpg'; }}
                 />
                 <div className="absolute top-4 right-4">
-                    <Badge variant={court.status === 'Available' ? 'green' : 'gray'}>
-                        {court.status}
+                    <Badge variant={isActive ? (court.status === 'Available' ? 'green' : 'gray') : 'red'}>
+                        {isActive ? (court.status || 'Available') : 'Unavailable'}
                     </Badge>
                 </div>
+                {!isActive && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                            COURT UNAVAILABLE
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="p-5 flex-1 flex flex-col">
@@ -49,7 +62,7 @@ export function CourtCard({ court, onBook }) {
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{court.description}</p>
 
                 {/* Dynamic Pricing Rules Badge */}
-                {hasPricingRules && (
+                {hasPricingRules && isActive && (
                     <div className="mb-3 p-2.5 bg-brand-orange/10 border border-brand-orange/30 rounded-lg">
                         <div className="flex items-start gap-2">
                             <DollarSign size={14} className="text-brand-orange mt-0.5 flex-shrink-0" />
@@ -65,12 +78,29 @@ export function CourtCard({ court, onBook }) {
                     </div>
                 )}
 
+                {/* Unavailable Notice for disabled courts */}
+                {!isActive && (
+                    <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-xs text-red-600 font-medium text-center">
+                            This court is currently unavailable for booking
+                        </p>
+                    </div>
+                )}
+
                 <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
                         <Users size={14} className="text-brand-green" />
                         Up to {maxPlayers} player{maxPlayers !== 1 ? 's' : ''}
                     </div>
-                    <Button variant="primary" size="sm" onClick={() => onBook(court)}>Book Now</Button>
+                    <Button 
+                        variant="primary" 
+                        size="sm" 
+                        onClick={() => onBook(court)}
+                        disabled={!isActive}
+                        className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                        {isActive ? 'Book Now' : 'Unavailable'}
+                    </Button>
                 </div>
             </div>
         </Card>
