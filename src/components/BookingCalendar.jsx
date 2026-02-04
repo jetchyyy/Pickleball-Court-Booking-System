@@ -32,15 +32,23 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
-    // Generate 24-hour time slots
+    // Generate 24-hour time slots with ranges (e.g., "8:00AM - 9:00AM")
     const timeSlots = Array.from({ length: 24 }, (_, i) => {
         const hour = i.toString().padStart(2, '0');
-        const period = i < 12 ? 'AM' : 'PM';
-        const displayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
-        const displayHourStr = displayHour.toString().padStart(2, '0');
+        const nextHour = ((i + 1) % 24).toString().padStart(2, '0');
+        
+        // Start time
+        const startPeriod = i < 12 ? 'AM' : 'PM';
+        const startDisplayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
+        
+        // End time (1 hour later)
+        const endHourNum = (i + 1) % 24;
+        const endPeriod = endHourNum < 12 ? 'AM' : 'PM';
+        const endDisplayHour = endHourNum === 0 ? 12 : (endHourNum > 12 ? endHourNum - 12 : endHourNum);
+        
         return {
             id: `${hour}:00`,
-            label: `${displayHourStr}:00 ${period}`
+            label: `${startDisplayHour}:00${startPeriod} - ${endDisplayHour}:00${endPeriod}`
         };
     });
 
@@ -197,7 +205,7 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                                         </span>
                                     )}
                                 </h4>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {sectionSlots.map((slot) => {
                                         const isSelected = selectedTimes.includes(slot.id);
                                         const isBooked = bookedTimes.includes(slot.id);

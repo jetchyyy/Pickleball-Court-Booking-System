@@ -30,12 +30,23 @@ export function AdminBookings() {
         successDescription: 'Action completed successfully.'
     });
 
+    // Helper function to convert 24-hour time to 12-hour format
+    const formatTime12Hour = (timeString) => {
+        if (!timeString) return '';
+        
+        // Handle time format with or without seconds (e.g., "14:00" or "14:00:00")
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+        
+        return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
+    };
+
     useEffect(() => {
         loadBookings();
 
         // Subscribe to real-time booking updates
         const subscription = subscribeToBookings((payload) => {
-            console.log('Booking updated:', payload);
             loadBookings();
         });
 
@@ -227,8 +238,8 @@ export function AdminBookings() {
                                                     <span className="flex items-center gap-1">
                                                         <Clock size={12} />
                                                         {booking.booked_times && Array.isArray(booking.booked_times) && booking.booked_times.length > 0
-                                                            ? booking.booked_times.join(', ')
-                                                            : `${booking.start_time} - ${booking.end_time}`
+                                                            ? booking.booked_times.map(time => formatTime12Hour(time)).join(', ')
+                                                            : `${formatTime12Hour(booking.start_time)} - ${formatTime12Hour(booking.end_time)}`
                                                         }
                                                     </span>
                                                 </div>

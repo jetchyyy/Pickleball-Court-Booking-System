@@ -1,9 +1,21 @@
 import { format } from 'date-fns';
-import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X, FileText } from 'lucide-react';
+import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X, FileText, Download } from 'lucide-react';
 import { Badge, Button } from '../ui';
 
 export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }) {
     if (!isOpen || !booking) return null;
+
+    // Helper function to convert 24-hour time to 12-hour format
+    const formatTime12Hour = (timeString) => {
+        if (!timeString) return '';
+        
+        // Handle time format with or without seconds (e.g., "14:00" or "14:00:00")
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+        
+        return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
+    };
 
     // Debug logging
     console.log('BookingDetailsModal - Booking data:', {
@@ -15,6 +27,44 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
         url_exists: !!booking.proof_of_payment_url,
         all_keys: Object.keys(booking).sort()
     });
+
+    // Function to download the proof of payment
+    const handleDownloadReceipt = async () => {
+        if (!booking.proof_of_payment_url) {
+            alert('No proof of payment available to download');
+            return;
+        }
+
+        try {
+            // Fetch the image
+            const response = await fetch(booking.proof_of_payment_url);
+            const blob = await response.blob();
+            
+            // Create a temporary URL for the blob
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            // Create a temporary anchor element and trigger download
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            
+            // Generate filename from booking details
+            const fileName = `receipt_${booking.customer_name?.replace(/\s+/g, '_')}_${booking.booking_date}_${booking.id?.substring(0, 8)}.jpg`;
+            link.download = fileName;
+            
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up the blob URL
+            window.URL.revokeObjectURL(blobUrl);
+            
+            console.log('Receipt downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading receipt:', error);
+            alert('Failed to download receipt. Please try again or view the image in a new tab.');
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -83,20 +133,26 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                         <Calendar size={14} className="text-gray-400" />
                                         <span>{booking.booking_date ? format(new Date(booking.booking_date), 'MMMM d, yyyy') : '-'}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <Clock size={14} className="text-gray-400" />
-                                        <span>{booking.start_time} - {booking.end_time}</span>
-                                    </div>
                                 </div>
+                                {/* Display individual time slots as ranges */}
                                 {booking.booked_times && booking.booked_times.length > 0 && (
-                                    <div className="pt-3 border-t border-brand-green/10">
-                                        <p className="text-xs font-semibold text-gray-600 mb-2">Booked Time Slots:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {booking.booked_times.map((time, idx) => (
-                                                <span key={idx} className="px-2.5 py-1 bg-brand-orange/20 text-brand-orange text-xs font-medium rounded-lg border border-brand-orange/30">
-                                                    {time}
-                                                </span>
-                                            ))}
+                                    <div className="mt-2">
+                                        <div className="flex items-start gap-1.5">
+                                            <Clock size={14} className="text-gray-400 mt-0.5" />
+                                            <div className="flex flex-wrap gap-2">
+                                                {booking.booked_times.map((time, idx) => {
+                                                    // Calculate end time (1 hour after start)
+                                                    const [hours, minutes] = time.split(':').map(Number);
+                                                    const endHour = hours + 1;
+                                                    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                                                    
+                                                    return (
+                                                        <span key={idx} className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                                                            {formatTime12Hour(time)} - {formatTime12Hour(endTime)}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -162,7 +218,14 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                 <Button onClick={() => { onUpdateStatus(booking.id, 'Cancelled'); onClose(); }} className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
                                     Cancel Booking
                                 </Button>
-                                <Button className="bg-brand-green hover:bg-brand-green-dark text-white">Download Receipt</Button>
+                                <Button 
+                                    onClick={handleDownloadReceipt}
+                                    disabled={!booking.proof_of_payment_url}
+                                    className="bg-brand-green hover:bg-brand-green-dark text-white flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Download size={16} />
+                                    Download Receipt
+                                </Button>
                             </>
                         )}
                         {booking.status === 'Cancelled' && (

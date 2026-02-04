@@ -29,7 +29,6 @@ export function Home() {
 
         // Subscribe to court updates
         const subscription = subscribeToCourts((payload) => {
-            console.log('Court status changed:', payload);
             // Reload courts immediately when any change occurs
             loadCourts();
         });
@@ -43,9 +42,7 @@ export function Home() {
 
     const loadCourts = async () => {
         try {
-            console.log('Loading courts...');
             const courts = await listCourts();
-            console.log('Courts loaded:', courts);
             // Show all courts (including disabled ones)
             setActiveCourts(courts || []);
         } catch (err) {
@@ -336,14 +333,10 @@ export function Home() {
                 endTime = `${endHour.toString().padStart(2, '0')}:${minutes}`;
             }
 
-            console.log(`Creating single booking: ${startTime} - ${endTime} for ${sortedSlots.length} selected slots`);
-            console.log(`Booked times: ${sortedSlots.join(', ')}`);
-
             // Upload proof of payment FIRST if file exists
             let proofOfPaymentUrl = null;
             if (bookingData.paymentProof) {
                 try {
-                    console.log('Uploading proof of payment...');
                     // Use a temporary ID for upload (we'll use the actual booking ID after creation)
                     const tempId = `temp-${Date.now()}`;
                     proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, tempId);
@@ -351,7 +344,6 @@ export function Home() {
                     if (!proofOfPaymentUrl) {
                         throw new Error('Failed to get upload URL');
                     }
-                    console.log('Proof of payment uploaded successfully:', proofOfPaymentUrl);
                 } catch (uploadErr) {
                     console.error('Failed to upload proof of payment:', uploadErr);
                     throw new Error('Failed to upload proof of payment. Please try again.');
@@ -374,7 +366,6 @@ export function Home() {
                 bookedTimes: sortedSlots
             });
 
-            console.log("Booking Confirmed:", newBooking);
             await loadBookings();
             setSelectedTimes([]);
             setIsModalOpen(false);

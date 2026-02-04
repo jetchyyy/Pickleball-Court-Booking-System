@@ -40,7 +40,6 @@ export async function listCourts() {
     return [];
   }
 
-  console.log('Fetched courts from database:', data);
   return data;
 }
 
@@ -134,8 +133,6 @@ export async function updateCourt(courtId, { name, type, price, description, ima
 
 // Toggle court active status (admin only)
 export async function toggleCourtStatus(courtId, isActive) {
-  console.log(`Attempting to toggle court ${courtId} to is_active=${isActive}`);
-  
   const { data, error } = await supabase
     .from('courts')
     .update({ is_active: isActive })
@@ -146,8 +143,6 @@ export async function toggleCourtStatus(courtId, isActive) {
     console.error('toggleCourtStatus error:', error);
     throw error;
   }
-
-  console.log('Toggle result:', data);
   
   if (!data || data.length === 0) {
     console.error('No data returned from update - court may not exist or update failed silently');
