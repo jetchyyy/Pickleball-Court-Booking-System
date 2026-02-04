@@ -91,7 +91,7 @@ export function Home() {
 
     // Load bookings for the entire month to calculate legend
     const [monthlyBookings, setMonthlyBookings] = useState([]);
-    
+
     const loadMonthlyBookings = async () => {
         if (!selectedCourt) return;
 
@@ -99,7 +99,7 @@ export function Home() {
             // Get bookings for the current month
             const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
             const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-            
+
             const { supabase } = await import('../lib/supabaseClient');
             const { data, error } = await supabase
                 .from('bookings')
@@ -127,7 +127,7 @@ export function Home() {
             setValidationError("⚠️ This court is currently unavailable for booking.");
             return;
         }
-        
+
         setSelectedCourt(court);
         setValidationError('');
         // Scroll to calendar section
@@ -137,16 +137,16 @@ export function Home() {
     // Get booked time slots for the selected date
     const getBookedTimes = () => {
         const bookedSlots = new Set();
-        
+
         // Block past time slots if selected date is today
         const today = startOfToday();
         const isToday = format(selectedDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-        
+
         if (isToday) {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
-            
+
             // Block all time slots that have already passed
             for (let hour = 0; hour <= currentHour; hour++) {
                 // If it's the current hour, check if we're past the start of the slot
@@ -161,7 +161,7 @@ export function Home() {
                 }
             }
         }
-        
+
         // Continue with existing booking conflict logic
         if (!courtBookings || courtBookings.length === 0) {
             return Array.from(bookedSlots);
@@ -220,7 +220,7 @@ export function Home() {
         if (!selectedCourt || !monthlyBookings || monthlyBookings.length === 0) return [];
 
         const isExclusiveSelected = selectedCourt?.type?.includes('Exclusive') || selectedCourt?.type?.includes('Whole');
-        
+
         // Define all time slots (24 hours)
         const allTimeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
         const totalSlots = allTimeSlots.length;
@@ -230,7 +230,7 @@ export function Home() {
 
         monthlyBookings.forEach(booking => {
             const bookingDate = booking.booking_date;
-            
+
             // Check if this booking conflicts with selected court
             let isConflict = false;
 
@@ -277,7 +277,7 @@ export function Home() {
         const dateStatuses = [];
         Object.keys(bookingsByDate).forEach(date => {
             const bookedSlotsCount = bookingsByDate[date].size;
-            
+
             if (bookedSlotsCount >= totalSlots) {
                 // Fully booked
                 dateStatuses.push({ date, status: 'fully-booked' });
@@ -340,7 +340,7 @@ export function Home() {
                     // Use a temporary ID for upload (we'll use the actual booking ID after creation)
                     const tempId = `temp-${Date.now()}`;
                     proofOfPaymentUrl = await uploadProofOfPayment(bookingData.paymentProof, tempId);
-                    
+
                     if (!proofOfPaymentUrl) {
                         throw new Error('Failed to get upload URL');
                     }
@@ -386,7 +386,7 @@ export function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-bg-light font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
+        <div className="min-h-screen bg-bg-user font-sans text-brand-green-dark selection:bg-brand-orange-light selection:text-brand-orange">
             <Navbar />
             <Hero />
             <Offers />
@@ -456,6 +456,7 @@ export function Home() {
                             )}
                             <Button
                                 size="lg"
+                                className="text-white"
                                 onClick={() => {
                                     setValidationError('');
                                     if (!selectedCourt) {

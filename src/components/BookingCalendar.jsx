@@ -36,16 +36,16 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
     const timeSlots = Array.from({ length: 24 }, (_, i) => {
         const hour = i.toString().padStart(2, '0');
         const nextHour = ((i + 1) % 24).toString().padStart(2, '0');
-        
+
         // Start time
         const startPeriod = i < 12 ? 'AM' : 'PM';
         const startDisplayHour = i === 0 ? 12 : (i > 12 ? i - 12 : i);
-        
+
         // End time (1 hour later)
         const endHourNum = (i + 1) % 24;
         const endPeriod = endHourNum < 12 ? 'AM' : 'PM';
         const endDisplayHour = endHourNum === 0 ? 12 : (endHourNum > 12 ? endHourNum - 12 : endHourNum);
-        
+
         return {
             id: `${hour}:00`,
             label: `${startDisplayHour}:00${startPeriod} - ${endDisplayHour}:00${endPeriod}`
@@ -110,7 +110,7 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                         const isSelected = isSameDay(day, selectedDate);
                         const isPast = isBefore(day, today);
                         const isTodayDate = isSameDay(day, today);
-                        
+
                         // Check if this day has a booking status
                         const dateStr = format(day, 'yyyy-MM-dd');
                         const dateStatus = fullyBookedDates.find(d => d.date === dateStr);
@@ -132,9 +132,9 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                                         !isSelected && isTodayDate && !isFullyBooked && 'border-2 border-brand-green text-brand-green font-semibold',
                                     )}
                                     title={
-                                        isFullyBooked 
-                                            ? 'All time slots are booked for this date' 
-                                            : isPartiallyBooked 
+                                        isFullyBooked
+                                            ? 'All time slots are booked for this date'
+                                            : isPartiallyBooked
                                                 ? 'Some time slots are booked for this date'
                                                 : undefined
                                     }

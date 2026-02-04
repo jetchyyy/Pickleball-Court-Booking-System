@@ -12,12 +12,12 @@ export function Hero() {
             subtitle: "Premium Surface • Lighting"
         },
         {
-            src: "/images/court1.JPG",
+            src: "/images/court1.jpg",
             title: "Pro-Grade Surface",
             subtitle: "Optimized for Performance"
         },
         {
-            src: "/images/court2.JPG",
+            src: "/images/court2.jpg",
             title: "Vibrant Community",
             subtitle: "Join the Club"
         }
@@ -34,7 +34,7 @@ export function Hero() {
     const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
 
     return (
-        <div className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
+        <div className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 overflow-hidden bg-bg-user">
             {/* Background blobs */}
             <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 w-96 h-96 bg-brand-green-light rounded-full blur-3xl opacity-50 -z-10"></div>
             <div className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 w-96 h-96 bg-brand-orange-light rounded-full blur-3xl opacity-50 -z-10"></div>

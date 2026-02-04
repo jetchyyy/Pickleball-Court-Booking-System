@@ -44,28 +44,28 @@ export function Navbar() {
             {isOpen && (
                 <div className="md:hidden bg-bg-user border-t border-gray-100">
                     <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                        <a 
-                            href="#courts" 
+                        <a
+                            href="#courts"
                             onClick={() => setIsOpen(false)}
                             className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
                         >
                             Courts
                         </a>
-                        <a 
-                            href="#offers" 
+                        <a
+                            href="#offers"
                             onClick={() => setIsOpen(false)}
                             className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
                         >
                             Offers
                         </a>
-                        <a 
-                            href="#contact" 
+                        <a
+                            href="#contact"
                             onClick={() => setIsOpen(false)}
                             className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50"
                         >
                             Contact
                         </a>
-                        <Button 
+                        <Button
                             onClick={() => {
                                 setIsOpen(false);
                                 document.getElementById('courts')?.scrollIntoView({ behavior: 'smooth' });

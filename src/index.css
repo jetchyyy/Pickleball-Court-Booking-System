@@ -18,10 +18,15 @@
   --color-brand-orange-light: #FFF7ED;
   /* Orange 50 */
 
+
   --color-bg-light: #F9F9F9;
   --color-bg-surface: #FFFFFF;
   --color-bg-user: #E9F5DB;
+  --color-text-main: #0F766E;
+  /* Teal 700 */
 }
+
+
 
 @layer base {
   body {

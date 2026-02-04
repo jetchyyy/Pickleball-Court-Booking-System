@@ -14,17 +14,17 @@ export function CourtCard({ court, onBook }) {
 
     // Check if court has dynamic pricing rules
     const hasPricingRules = court.pricing_rules && court.pricing_rules.length > 0;
-    
+
     // Get max players (default to 10 if not set)
     const maxPlayers = court.max_players || 10;
-    
+
     // Check if court is active (default to true if not specified)
     const isActive = court.is_active !== false;
 
     return (
         <>
             <Card className={`group h-full flex flex-col ${!isActive ? 'opacity-75' : ''}`}>
-                <div 
+                <div
                     className="relative h-48 overflow-hidden bg-gray-100 cursor-pointer"
                     onClick={() => setIsExpanded(true)}
                 >
@@ -113,12 +113,12 @@ export function CourtCard({ court, onBook }) {
                             <Users size={14} className="text-brand-green" />
                             Up to {maxPlayers} player{maxPlayers !== 1 ? 's' : ''}
                         </div>
-                        <Button 
-                            variant="primary" 
-                            size="sm" 
+                        <Button
+                            variant="primary"
+                            size="sm"
                             onClick={() => onBook(court)}
                             disabled={!isActive}
-                            className={!isActive ? 'opacity-50 cursor-not-allowed' : ''}
+                            className={!isActive ? 'opacity-50 cursor-not-allowed' : 'text-white'}
                         >
                             {isActive ? 'Book Now' : 'Unavailable'}
                         </Button>
@@ -128,11 +128,11 @@ export function CourtCard({ court, onBook }) {
 
             {/* Expanded Modal */}
             {isExpanded && (
-                <div 
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setIsExpanded(false)}
                 >
-                    <div 
+                    <div
                         className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -234,16 +234,16 @@ export function CourtCard({ court, onBook }) {
 
                             {/* Action Buttons */}
                             <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                <Button 
-                                    variant="ghost" 
+                                <Button
+                                    variant="ghost"
                                     className="flex-1"
                                     onClick={() => setIsExpanded(false)}
                                 >
                                     Close
                                 </Button>
-                                <Button 
-                                    variant="primary" 
-                                    className="flex-1"
+                                <Button
+                                    variant="primary"
+                                    className="flex-1 text-white"
                                     onClick={() => {
                                         setIsExpanded(false);
                                         onBook(court);
