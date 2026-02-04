@@ -193,7 +193,7 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
 
                             <div className="flex gap-3 pt-2">
                                 <Button variant="ghost" className="flex-1" onClick={onClose}>Cancel</Button>
-                                <Button className="flex-1" onClick={handleNext}>Next: Pay</Button>
+                                <Button className="flex-1 text-white" onClick={handleNext}>Next: Pay</Button>
                             </div>
                         </div>
                     )}
@@ -312,7 +312,7 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
 
                             <div className="flex gap-3 pt-2">
                                 <Button variant="ghost" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-                                <Button className="flex-1" onClick={handleSubmit}>Submit Booking</Button>
+                                <Button className="flex-1 text-white" onClick={handleSubmit}>Submit Booking</Button>
                             </div>
                         </div>
                     )}
@@ -340,7 +340,7 @@ export function BookingModal({ isOpen, onClose, bookingData, onConfirm }) {
                             </div>
 
                             <div className="pt-4">
-                                <Button size="lg" className="w-full" onClick={onClose}>Done</Button>
+                                <Button size="lg" className="w-full text-white" onClick={onClose}>Done</Button>
                             </div>
                         </div>
                     )}

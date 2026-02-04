@@ -86,7 +86,7 @@ export function AdminActionModal({
                             <p className="text-gray-500 mt-2 text-sm">{successDescription}</p>
                         </div>
                         <div className="pt-2">
-                            <Button className="w-full" onClick={handleClose}>Done</Button>
+                            <Button className="w-full text-white" onClick={handleClose}>Done</Button>
                         </div>
                     </div>
                 )}
