@@ -1,14 +1,16 @@
-import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Users, KeyRound } from 'lucide-react';
+import { BarChart3, Calendar, LayoutDashboard, LogOut, Settings, Users, KeyRound, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { getCurrentUser, signOut } from '../services/auth';
 import { AdminActionModal } from '../components/admin/AdminActionModal';
 
 export function AdminLayout() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const [actionModal, setActionModal] = useState({
         isOpen: false,
@@ -21,6 +23,11 @@ export function AdminLayout() {
         successDescription: 'Action completed successfully.',
         onSuccess: null
     });
+
+    useEffect(() => {
+        // Scroll to top on route change
+        window.scrollTo(0, 0);
+    }, [location.pathname]);
 
     useEffect(() => {
         // Check if user is authenticated
@@ -86,9 +93,9 @@ export function AdminLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-bg-light font-sans flex">
+        <div className="min-h-screen bg-bg-light font-sans flex text-gray-900">
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 fixed top-0 bottom-0 left-0 z-40 hidden md:flex flex-col">
+            <aside className="w-64 bg-white border-r border-gray-200 fixed top-0 bottom-0 left-0 z-50 hidden md:flex flex-col">
                 <div className="h-16 flex items-center gap-2 px-6 border-b border-gray-100">
                     <div className="bg-brand-orange p-1.5 rounded-lg">
                         <span className="text-white font-bold text-sm">PP</span>
@@ -126,18 +133,69 @@ export function AdminLayout() {
             </aside>
 
             {/* Mobile Header (visible on small screens) */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center px-4 justify-between">
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50 flex items-center px-4 justify-between">
                 <div className="flex items-center gap-2">
                     <div className="bg-brand-orange p-1.5 rounded-lg">
                         <span className="text-white font-bold text-sm">PP</span>
                     </div>
                     <span className="font-display font-bold text-lg text-brand-green-dark">Admin Panel</span>
                 </div>
-                {/* Mobile menu toggle could go here */}
+                <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
             </div>
 
+            {/* Mobile Menu Overlay */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div
+                        className="absolute top-16 left-0 right-0 bg-white border-b border-gray-200 p-4 shadow-lg animate-in slide-in-from-top-5 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <nav className="space-y-1 mb-4">
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={({ isActive }) => `
+                                        flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors
+                                        ${isActive
+                                            ? 'bg-brand-green-light text-brand-green-dark'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                                    `}
+                                >
+                                    <item.icon size={20} />
+                                    {item.label}
+                                </NavLink>
+                            ))}
+                        </nav>
+
+                        <div className="pt-4 border-t border-gray-100">
+                            <div className="mb-3 px-3 py-2 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-500">Signed in as</p>
+                                <p className="text-sm font-medium text-gray-700 truncate">{user.email}</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false);
+                                    handleLogout();
+                                }}
+                            >
+                                <LogOut size={20} className="mr-2" /> Logout
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Content */}
-            <main className="flex-1 md:ml-64 p-4 sm:p-8 pt-20 md:pt-8">
+            <main className="flex-1 md:ml-64 p-4 sm:p-8 pt-20 md:pt-8 min-w-0 overflow-x-hidden">
                 <Outlet />
             </main>
 

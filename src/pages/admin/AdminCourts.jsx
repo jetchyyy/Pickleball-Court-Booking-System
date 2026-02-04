@@ -210,13 +210,13 @@ export function AdminCourts() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full max-w-full">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold font-display text-brand-green-dark">Court Management</h1>
                     <p className="text-gray-500">Add, edit, or remove playing courts</p>
                 </div>
-                <Button onClick={() => setIsFormOpen(true)} disabled={loading}>
+                <Button onClick={() => setIsFormOpen(true)} disabled={loading} className="text-white">
                     <Plus size={18} className="mr-2" /> Add Court
                 </Button>
             </div>
@@ -418,7 +418,7 @@ export function AdminCourts() {
                                 </Button>
                                 <Button
                                     type="submit"
-                                    className="flex-1"
+                                    className="flex-1 text-white"
                                     disabled={loading}
                                 >
                                     {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Court' : 'Create Court')}

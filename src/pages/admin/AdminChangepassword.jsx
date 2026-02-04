@@ -4,15 +4,15 @@ import { Button } from '../../components/ui';
 import { changePassword } from '../../services/auth';
 
 // Move PasswordInput component outside to prevent remounting
-const PasswordInput = ({ 
-    label, 
-    value, 
-    onChange, 
-    show, 
-    onToggleShow, 
+const PasswordInput = ({
+    label,
+    value,
+    onChange,
+    show,
+    onToggleShow,
     placeholder,
     autoComplete,
-    disabled 
+    disabled
 }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -96,7 +96,7 @@ export function ChangePassword() {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-            
+
             // Hide success message after 5 seconds
             setTimeout(() => setSuccess(false), 5000);
         } catch (err) {
@@ -108,7 +108,7 @@ export function ChangePassword() {
     };
 
     return (
-        <div className="max-w-2xl">
+        <div className="max-w-2xl w-full max-w-full">
             <div className="mb-8">
                 <h1 className="text-2xl font-display font-bold text-brand-green-dark mb-2">
                     Change Password
@@ -172,9 +172,9 @@ export function ChangePassword() {
                     )}
 
                     <div className="flex gap-3 pt-4">
-                        <Button 
-                            type="submit" 
-                            className="flex-1" 
+                        <Button
+                            type="submit"
+                            className="flex-1 text-white"
                             disabled={loading}
                         >
                             {loading ? 'Changing Password...' : 'Change Password'}

@@ -33,12 +33,12 @@ export function AdminBookings() {
     // Helper function to convert 24-hour time to 12-hour format
     const formatTime12Hour = (timeString) => {
         if (!timeString) return '';
-        
+
         // Handle time format with or without seconds (e.g., "14:00" or "14:00:00")
         const [hours, minutes] = timeString.split(':').map(Number);
         const period = hours >= 12 ? 'PM' : 'AM';
         const displayHour = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
-        
+
         return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
     };
 
@@ -150,7 +150,7 @@ export function AdminBookings() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full max-w-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold font-display text-brand-green-dark">Booking Management</h1>

@@ -8,12 +8,12 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
     // Helper function to convert 24-hour time to 12-hour format
     const formatTime12Hour = (timeString) => {
         if (!timeString) return '';
-        
+
         // Handle time format with or without seconds (e.g., "14:00" or "14:00:00")
         const [hours, minutes] = timeString.split(':').map(Number);
         const period = hours >= 12 ? 'PM' : 'AM';
         const displayHour = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
-        
+
         return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
     };
 
@@ -39,26 +39,26 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
             // Fetch the image
             const response = await fetch(booking.proof_of_payment_url);
             const blob = await response.blob();
-            
+
             // Create a temporary URL for the blob
             const blobUrl = window.URL.createObjectURL(blob);
-            
+
             // Create a temporary anchor element and trigger download
             const link = document.createElement('a');
             link.href = blobUrl;
-            
+
             // Generate filename from booking details
             const fileName = `receipt_${booking.customer_name?.replace(/\s+/g, '_')}_${booking.booking_date}_${booking.id?.substring(0, 8)}.jpg`;
             link.download = fileName;
-            
+
             // Append to body, click, and remove
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             // Clean up the blob URL
             window.URL.revokeObjectURL(blobUrl);
-            
+
             console.log('Receipt downloaded successfully');
         } catch (error) {
             console.error('Error downloading receipt:', error);
@@ -67,10 +67,10 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900">Booking Details</h2>
                         <p className="text-sm text-gray-500 font-mono">ID: {booking.id?.substring(0, 8)}</p>
@@ -80,7 +80,7 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                     </button>
                 </div>
 
-                <div className="p-6 grid md:grid-cols-2 gap-8">
+                <div className="p-6 grid md:grid-cols-2 gap-8 overflow-y-auto">
                     {/* Left Column: Booking Info */}
                     <div className="space-y-6">
                         <div>
@@ -145,7 +145,7 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                                     const [hours, minutes] = time.split(':').map(Number);
                                                     const endHour = hours + 1;
                                                     const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                                                    
+
                                                     return (
                                                         <span key={idx} className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
                                                             {formatTime12Hour(time)} - {formatTime12Hour(endTime)}
@@ -218,7 +218,7 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                 <Button onClick={() => { onUpdateStatus(booking.id, 'Cancelled'); onClose(); }} className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
                                     Cancel Booking
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={handleDownloadReceipt}
                                     disabled={!booking.proof_of_payment_url}
                                     className="bg-brand-green hover:bg-brand-green-dark text-white flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

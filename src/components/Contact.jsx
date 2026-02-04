@@ -3,7 +3,7 @@ import { Button } from './ui';
 
 export function Contact() {
     return (
-        <section id="contact" className="py-24 bg-bg-user">
+        <section id="contact" className="py-24 bg-bg-user w-full overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl sm:text-4xl font-display font-bold text-brand-green-dark mb-4">
@@ -16,24 +16,24 @@ export function Contact() {
 
                 <div className="grid lg:grid-cols-2 gap-12 items-start">
                     {/* Contact Info */}
-                    <div className="space-y-8">
-                        <div className="bg-bg-light p-8 rounded-3xl border border-gray-100">
+                    <div className="space-y-8 min-w-0">
+                        <div className="bg-bg-light p-6 sm:p-8 rounded-3xl border border-gray-100">
                             <h3 className="font-display font-bold text-xl text-brand-green-dark mb-6">Contact Information</h3>
 
                             <div className="space-y-6">
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark">
+                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark shrink-0">
                                         <Phone size={24} />
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 font-medium">Phone Number</p>
-                                        <p className="text-lg font-semibold text-gray-800">(0929) 119 1087</p>
-                                        <p className="text-lg font-semibold text-gray-800">(0929) 677 5914</p>
+                                        <p className="text-lg font-semibold text-gray-800 break-words">(0929) 119 1087</p>
+                                        <p className="text-lg font-semibold text-gray-800 break-words">(0929) 677 5914</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark">
+                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark shrink-0">
                                         <Clock size={24} />
                                     </div>
                                     <div>
@@ -44,17 +44,17 @@ export function Contact() {
                                 </div>
 
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark">
+                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark shrink-0">
                                         <Mail size={24} />
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 font-medium">Email Address</p>
-                                        <p className="text-lg font-semibold text-gray-800">thepicklepointcebu@yahoo.com</p>
+                                        <p className="text-lg font-semibold text-gray-800 break-all">thepicklepointcebu@yahoo.com</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark">
+                                    <div className="p-3 bg-brand-green-light rounded-xl text-brand-green-dark shrink-0">
                                         <MapPin size={24} />
                                     </div>
                                     <div>
@@ -66,7 +66,7 @@ export function Contact() {
                             </div>
                         </div>
 
-                        <div className="bg-brand-orange text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
+                        <div className="bg-brand-orange text-white p-6 sm:p-8 rounded-3xl shadow-lg relative overflow-hidden">
                             {/* Decorative circle */}
                             <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-48 h-48 bg-white/10 rounded-full"></div>
 
@@ -96,7 +96,7 @@ export function Contact() {
                     </div>
 
                     {/* Map */}
-                    <div className="h-full min-h-[400px] bg-gray-100 rounded-3xl overflow-hidden shadow-lg border border-gray-200">
+                    <div className="h-full min-h-[400px] w-full bg-gray-100 rounded-3xl overflow-hidden shadow-lg border border-gray-200">
                         <iframe
                             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d307.9333774424817!2d123.94258601627138!3d10.326493210451394!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a999007b7ab781%3A0xa291446a335dd76e!2sPickle%20Point-%20Cebu!5e1!3m2!1sen!2sph!4v1769687613671!5m2!1sen!2sph"
                             width="100%"

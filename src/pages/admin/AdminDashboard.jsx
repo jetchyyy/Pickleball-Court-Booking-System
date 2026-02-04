@@ -22,7 +22,7 @@ export function AdminDashboard() {
     const loadDashboardData = async () => {
         try {
             setLoading(true);
-            
+
             // Fetch all bookings and courts
             const bookings = await getAllBookings();
             const courts = await listCourts();
@@ -30,7 +30,7 @@ export function AdminDashboard() {
             // Calculate stats
             const total = bookings ? bookings.length : 0;
             const revenue = bookings ? bookings.reduce((sum, b) => sum + (b.total_price || 0), 0) : 0;
-            
+
             // Count today's bookings
             const today = new Date().toISOString().split('T')[0];
             const todayCount = bookings ? bookings.filter(b => b.booking_date === today).length : 0;
@@ -43,10 +43,10 @@ export function AdminDashboard() {
             });
 
             // Get recent 5 bookings (sorted by booking_date desc)
-            const recent = bookings ? bookings.sort((a, b) => 
+            const recent = bookings ? bookings.sort((a, b) =>
                 new Date(b.booking_date) - new Date(a.booking_date)
             ).slice(0, 5) : [];
-            
+
             setRecentBookings(recent);
         } catch (err) {
             console.error('Error loading dashboard data:', err);
@@ -75,7 +75,7 @@ export function AdminDashboard() {
     );
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 w-full max-w-full overflow-x-hidden">
             <div>
                 <h1 className="text-2xl font-bold font-display text-brand-green-dark">Dashboard Overview</h1>
                 <p className="text-gray-500">Welcome back, Admin! Here's what's happening today.</p>

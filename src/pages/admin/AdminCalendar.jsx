@@ -68,7 +68,7 @@ export function AdminCalendar() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full max-w-full">
             <div>
                 <h1 className="text-2xl font-bold font-display text-brand-green-dark">Calendar Schedule</h1>
                 <p className="text-gray-500">Overview of efficient court utilization</p>

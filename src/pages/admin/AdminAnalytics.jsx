@@ -187,7 +187,7 @@ export function AdminAnalytics() {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 w-full max-w-full">
             <div>
                 <h1 className="text-2xl font-bold font-display text-brand-green-dark">Analytics & Reports</h1>
                 <p className="text-gray-500">Performance metrics and utilization reports</p>
