@@ -262,27 +262,28 @@ export function AdminAnalytics() {
                     </div>
 
                     {loading ? (
-                        <div className="h-64 flex items-center justify-center">
-                            <p className="text-gray-400">Loading analytics...</p>
-                        </div>
-                    ) : revenueData.some(item => item.value > 0) ? (
-                        <div className="h-80 flex items-end justify-between gap-3 bg-gray-50 p-4 rounded-lg">
-                            {revenueData.map((item) => (
-                                <div key={item.day} className="flex flex-col items-center gap-3 flex-1 group">
-                                    <div className="relative w-full h-full flex flex-col justify-end items-center">
-                                        <div
-                                            className="w-full bg-gradient-to-t from-brand-green to-brand-green-light rounded-t-md transition-all duration-500 hover:from-brand-green-dark hover:to-brand-green shadow-sm hover:shadow-md"
-                                            style={{ height: item.height, minHeight: '4px' }}
-                                        ></div>
-                                        {/* Tooltip */}
-                                        <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs font-semibold py-2 px-3 rounded whitespace-nowrap pointer-events-none">
-                                            ₱{item.value.toLocaleString()}
-                                        </div>
-                                    </div>
-                                    <span className="text-xs font-semibold text-gray-700">{item.day}</span>
-                                </div>
-                            ))}
-                        </div>
+    <div className="h-64 flex items-center justify-center">
+        <p className="text-gray-400">Loading analytics...</p>
+    </div>
+) : revenueData.some(item => item.value > 0) ? (
+    <div className="h-80 flex items-end justify-between gap-3 bg-gray-50 p-4 rounded-lg">
+        {revenueData.map((item) => (
+            <div key={item.day} className="flex flex-col items-center gap-3 flex-1 group">
+                {/* Remove h-full and fix the structure */}
+                <div className="relative w-full flex flex-col justify-end" style={{ height: '280px' }}>
+                    <div
+                        className="w-full bg-gradient-to-t from-brand-green to-brand-green-light rounded-t-md transition-all duration-500 hover:from-brand-green-dark hover:to-brand-green shadow-sm hover:shadow-md"
+                        style={{ height: item.height, minHeight: item.value > 0 ? '8px' : '0px' }}
+                    ></div>
+                    {/* Tooltip */}
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs font-semibold py-2 px-3 rounded whitespace-nowrap pointer-events-none">
+                        ₱{item.value.toLocaleString()}
+                    </div>
+                </div>
+                <span className="text-xs font-semibold text-gray-700">{item.day}</span>
+            </div>
+        ))}
+    </div>
                     ) : (
                         <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
                             <div className="text-center">
