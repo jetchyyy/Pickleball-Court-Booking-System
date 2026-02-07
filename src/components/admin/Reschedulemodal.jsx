@@ -146,7 +146,7 @@ export function RescheduleModal({ isOpen, onClose, booking, onConfirm }) {
         };
         const newPrice = calculatePriceForSlots(selectedTimes, courtData);
 
-        const message = `Good day, ${customerName}! Due to ${reasonText}, we need to reschedule your ${courtName} booking from ${originalDate} (${originalTimes}) to ${newDate} (${newTimes}). Total: ₱${newPrice}. Questions? Contact us. - Badminton Court`;
+        const message = `Good day, ${customerName}! Due to ${reasonText}, we need to reschedule your ${courtName} booking from ${originalDate} (${originalTimes}) to ${newDate} (${newTimes}). Total: ₱${newPrice}. Questions? Contact us. - ThePicklepointCebu`;
 
         return message;
     };
