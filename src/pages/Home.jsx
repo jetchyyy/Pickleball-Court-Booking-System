@@ -46,7 +46,6 @@ export function Home() {
             // Show all courts (including disabled ones)
             setActiveCourts(courts || []);
         } catch (err) {
-            console.error('Error loading courts:', err);
             // Fallback to empty array
             setActiveCourts([]);
         }
@@ -106,16 +105,14 @@ export function Home() {
                 .select('*, courts(id, name, type)')
                 .gte('booking_date', format(startOfMonth, 'yyyy-MM-dd'))
                 .lte('booking_date', format(endOfMonth, 'yyyy-MM-dd'))
-                .eq('status', 'Confirmed');
+                .in('status', ['Confirmed', 'Rescheduled']); // Include both Confirmed and Rescheduled bookings
 
             if (error) {
-                console.error('Error loading monthly bookings:', error);
                 setMonthlyBookings([]);
             } else {
                 setMonthlyBookings(data || []);
             }
         } catch (err) {
-            console.error('Error loading monthly bookings:', err);
             setMonthlyBookings([]);
         }
     };
@@ -345,7 +342,6 @@ export function Home() {
                         throw new Error('Failed to get upload URL');
                     }
                 } catch (uploadErr) {
-                    console.error('Failed to upload proof of payment:', uploadErr);
                     throw new Error('Failed to upload proof of payment. Please try again.');
                 }
             }

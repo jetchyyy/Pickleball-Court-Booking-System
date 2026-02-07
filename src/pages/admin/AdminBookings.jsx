@@ -3,8 +3,9 @@ import { Calendar, CheckCircle, Clock, Eye, MoreVertical, Search, Trash2, XCircl
 import { useEffect, useState } from 'react';
 import { Badge, Button, Pagination } from '../../components/ui';
 import { BookingDetailsModal } from '../../components/admin/BookingDetailsModal';
+import { RescheduleModal } from '../../components/admin/Reschedulemodal';
 import { AdminActionModal } from '../../components/admin/AdminActionModal';
-import { getAllBookings, updateBookingStatus, subscribeToBookings } from '../../services/booking';
+import { getAllBookings, updateBookingStatus, subscribeToBookings, rescheduleBooking } from '../../services/booking';
 import { supabase } from '../../lib/supabaseClient';
 
 export function AdminBookings() {
@@ -13,6 +14,7 @@ export function AdminBookings() {
     const [filterStatus, setFilterStatus] = useState('All');
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Pagination State
@@ -102,6 +104,45 @@ export function AdminBookings() {
         }
     };
 
+    // Handle reschedule button click
+    const handleReschedule = (booking) => {
+        setSelectedBooking(booking);
+        setIsModalOpen(false); // Close details modal
+        setIsRescheduleModalOpen(true); // Open reschedule modal
+    };
+
+    // Handle reschedule confirmation
+    const handleRescheduleConfirm = async (rescheduleData) => {
+        try {
+            const result = await rescheduleBooking(rescheduleData);
+            
+            if (!result) {
+                throw new Error('Reschedule returned no data');
+            }
+            
+            await loadBookings();
+            
+            // Show success message
+            setActionModal({
+                isOpen: true,
+                title: 'Booking Rescheduled',
+                description: 'The booking has been successfully rescheduled. Don\'t forget to send the SMS message to the customer!',
+                variant: 'success',
+                confirmLabel: 'OK',
+                successTitle: 'Success',
+                successDescription: 'Booking rescheduled.',
+                action: async () => {
+                    // Just close the modal
+                }
+            });
+            
+            setIsRescheduleModalOpen(false);
+            setSelectedBooking(null);
+        } catch (error) {
+            alert('Failed to reschedule booking: ' + error.message);
+        }
+    };
+
     const handleDeleteClick = (booking) => {
         setActionModal({
             isOpen: true,
@@ -112,13 +153,26 @@ export function AdminBookings() {
             successTitle: 'Booking Deleted',
             successDescription: 'The booking has been successfully removed from the system.',
             action: async () => {
-                const { error } = await supabase
-                    .from('bookings')
-                    .delete()
-                    .eq('id', booking.id);
+                try {
+                    const { data, error } = await supabase
+                        .from('bookings')
+                        .delete()
+                        .eq('id', booking.id)
+                        .select();
 
-                if (error) throw error;
-                await loadBookings();
+                    if (error) {
+                        throw new Error(`Delete failed: ${error.message}`);
+                    }
+
+                    if (!data || data.length === 0) {
+                        throw new Error('Booking not found or delete permission denied. Check RLS policies.');
+                    }
+
+                    await loadBookings();
+                } catch (err) {
+                    alert('Failed to delete booking: ' + err.message);
+                    throw err;
+                }
             }
         });
     };
@@ -145,6 +199,7 @@ export function AdminBookings() {
         switch (status) {
             case 'Confirmed': return 'green';
             case 'Cancelled': return 'red';
+            case 'Rescheduled': return 'orange';
             default: return 'orange';
         }
     };
@@ -159,7 +214,7 @@ export function AdminBookings() {
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <div className="flex bg-gray-100 p-1 rounded-xl">
-                        {['All', 'Confirmed', 'Cancelled'].map((status) => (
+                        {['All', 'Confirmed', 'Rescheduled', 'Cancelled'].map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setFilterStatus(status)}
@@ -275,11 +330,27 @@ export function AdminBookings() {
                 )}
             </div>
 
+            {/* Booking Details Modal */}
             <BookingDetailsModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedBooking(null);
+                }}
                 booking={selectedBooking}
                 onUpdateStatus={updateStatus}
+                onReschedule={handleReschedule}
+            />
+
+            {/* Reschedule Modal */}
+            <RescheduleModal
+                isOpen={isRescheduleModalOpen}
+                onClose={() => {
+                    setIsRescheduleModalOpen(false);
+                    setSelectedBooking(null);
+                }}
+                booking={selectedBooking}
+                onConfirm={handleRescheduleConfirm}
             />
 
             <AdminActionModal

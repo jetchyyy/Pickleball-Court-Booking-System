@@ -95,7 +95,7 @@ export async function getDailyBookings(date) {
     .from('bookings')
     .select('*, courts(id, name, type)')
     .eq('booking_date', date)
-    .eq('status', 'Confirmed');
+    .in('status', ['Confirmed', 'Rescheduled']);
 
   if (error) {
     console.error('getDailyBookings error:', error);
@@ -152,7 +152,7 @@ export async function createBooking({
 export async function getAllBookings() {
   const { data, error } = await supabase
     .from('bookings')
-    .select('*, courts(name, type)')
+    .select('*, courts(name, type, price, pricing_rules)')
     .order('booking_date', { ascending: false });
 
   if (error) {
@@ -181,4 +181,72 @@ export function subscribeToBookings(callback) {
     .channel('bookings')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, callback)
     .subscribe();
+}
+
+// Reschedule booking
+export async function rescheduleBooking({
+  bookingId,
+  newDate,
+  newStartTime,
+  newEndTime,
+  newBookedTimes,
+  newTotalPrice,
+  reason,
+  originalDate,
+  originalStartTime,
+  originalEndTime,
+  originalBookedTimes
+}) {
+  try {
+    // First, verify the booking exists and get its current total_price
+    const { data: checkData, error: checkError } = await supabase
+      .from('bookings')
+      .select('id, status, booking_date, booked_times, total_price')
+      .eq('id', bookingId);
+
+    if (checkError) {
+      throw new Error(`Failed to verify booking: ${checkError.message}`);
+    }
+
+    if (!checkData || checkData.length === 0) {
+      throw new Error(`Booking with ID ${bookingId} not found`);
+    }
+
+    // Update the booking with new details and preserve original info
+    const updatePayload = {
+      booking_date: newDate,
+      start_time: newStartTime,
+      end_time: newEndTime,
+      booked_times: newBookedTimes,
+      total_price: newTotalPrice,
+      status: 'Rescheduled',
+      rescheduled_from: {
+        original_date: originalDate,
+        original_start_time: originalStartTime,
+        original_end_time: originalEndTime,
+        original_booked_times: originalBookedTimes,
+        original_total_price: checkData[0].total_price,
+        reason: reason,
+        rescheduled_at: new Date().toISOString()
+      }
+    };
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .update(updatePayload)
+      .eq('id', bookingId)
+      .select('*, courts(name, type, price, pricing_rules)');
+
+    if (error) {
+      throw new Error(`Reschedule failed: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('Update query returned no rows. Check RLS policies or booking permissions.');
+    }
+
+    return data[0];
+  } catch (err) {
+    throw err;
+  }
 }

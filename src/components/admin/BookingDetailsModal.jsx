@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
-import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X, FileText, Download } from 'lucide-react';
+import { Calendar, Clock, CreditCard, Mail, MapPin, Phone, User, X, FileText, Download, RefreshCw, History, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 import { Badge, Button } from '../ui';
 
-export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }) {
+export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus, onReschedule }) {
     if (!isOpen || !booking) return null;
 
     // Helper function to convert 24-hour time to 12-hour format
@@ -17,16 +17,25 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
         return `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`;
     };
 
-    // Debug logging
-    console.log('BookingDetailsModal - Booking data:', {
-        id: booking.id,
-        customer_name: booking.customer_name,
-        total_price: booking.total_price,
-        total_price_type: typeof booking.total_price,
-        proof_url: booking.proof_of_payment_url,
-        url_exists: !!booking.proof_of_payment_url,
-        all_keys: Object.keys(booking).sort()
-    });
+    // Calculate refund amount if rescheduled
+    const calculateRefund = () => {
+        if (!booking.rescheduled_from || !booking.rescheduled_from.original_total_price) {
+            return null;
+        }
+
+        const originalPrice = parseFloat(booking.rescheduled_from.original_total_price) || 0;
+        const newPrice = parseFloat(booking.total_price) || 0;
+        const difference = originalPrice - newPrice;
+
+        return {
+            originalPrice,
+            newPrice,
+            difference,
+            type: difference > 0 ? 'refund' : difference < 0 ? 'additional' : 'same'
+        };
+    };
+
+    const refundInfo = calculateRefund();
 
     // Function to download the proof of payment
     const handleDownloadReceipt = async () => {
@@ -58,10 +67,7 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
 
             // Clean up the blob URL
             window.URL.revokeObjectURL(blobUrl);
-
-            console.log('Receipt downloaded successfully');
         } catch (error) {
-            console.error('Error downloading receipt:', error);
             alert('Failed to download receipt. Please try again or view the image in a new tab.');
         }
     };
@@ -164,6 +170,113 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                                 </div>
                             </div>
                         </div>
+
+                        {/* Reschedule History with Refund Info */}
+                        {booking.rescheduled_from && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <History size={16} className="text-brand-orange" />
+                                    <h4 className="text-xs font-bold text-brand-orange uppercase tracking-wider">
+                                        Rescheduled Booking
+                                    </h4>
+                                </div>
+                                <div className="space-y-3 text-sm">
+                                    {/* Original Booking Info */}
+                                    <div className="bg-white/50 rounded-lg p-3 space-y-2">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase">Original Booking</p>
+                                        <div>
+                                            <span className="text-gray-600">Date:</span>
+                                            <p className="font-semibold text-gray-900">
+                                                {booking.rescheduled_from.original_date 
+                                                    ? format(new Date(booking.rescheduled_from.original_date), 'MMMM d, yyyy')
+                                                    : '-'
+                                                }
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600">Time:</span>
+                                            <p className="font-semibold text-gray-900">
+                                                {booking.rescheduled_from.original_booked_times?.map(t => formatTime12Hour(t)).join(', ') || '-'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600">Original Amount:</span>
+                                            <p className="font-bold text-lg text-gray-900">
+                                                ₱{booking.rescheduled_from.original_total_price || booking.total_price || 0}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Refund Calculation */}
+                                    {refundInfo && refundInfo.type !== 'same' && (
+                                        <div className={`rounded-lg p-3 ${
+                                            refundInfo.type === 'refund' 
+                                                ? 'bg-green-50 border border-green-200' 
+                                                : 'bg-red-50 border border-red-200'
+                                        }`}>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <DollarSign size={16} className={refundInfo.type === 'refund' ? 'text-green-600' : 'text-red-600'} />
+                                                <p className="text-xs font-semibold uppercase tracking-wider">
+                                                    {refundInfo.type === 'refund' ? 'Refund Required' : 'Additional Payment Required'}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Original Total:</span>
+                                                    <span className="font-semibold">₱{refundInfo.originalPrice}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">New Total:</span>
+                                                    <span className="font-semibold">₱{refundInfo.newPrice}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                                    <span className={`font-bold ${
+                                                        refundInfo.type === 'refund' ? 'text-green-700' : 'text-red-700'
+                                                    }`}>
+                                                        {refundInfo.type === 'refund' ? 'Refund Amount:' : 'Additional Payment:'}
+                                                    </span>
+                                                    <span className={`font-bold text-lg flex items-center gap-1 ${
+                                                        refundInfo.type === 'refund' ? 'text-green-700' : 'text-red-700'
+                                                    }`}>
+                                                        {refundInfo.type === 'refund' ? (
+                                                            <TrendingDown size={18} />
+                                                        ) : (
+                                                            <TrendingUp size={18} />
+                                                        )}
+                                                        ₱{Math.abs(refundInfo.difference).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {refundInfo && refundInfo.type === 'same' && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                            <p className="text-sm text-blue-800 font-medium">
+                                                ✓ No refund needed - Same price
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Reason */}
+                                    <div>
+                                        <span className="text-gray-600">Reason:</span>
+                                        <p className="font-medium text-gray-900 capitalize">
+                                            {booking.rescheduled_from.reason || '-'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Rescheduled At:</span>
+                                        <p className="text-xs text-gray-600">
+                                            {booking.rescheduled_from.rescheduled_at 
+                                                ? format(new Date(booking.rescheduled_from.rescheduled_at), 'MMM d, yyyy h:mm a')
+                                                : '-'
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column: Proof of Payment */}
@@ -213,8 +326,15 @@ export function BookingDetailsModal({ isOpen, onClose, booking, onUpdateStatus }
                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between gap-3">
                     <Button variant="ghost" onClick={onClose}>Close</Button>
                     <div className="flex gap-2">
-                        {booking.status === 'Confirmed' && (
+                        {(booking.status === 'Confirmed' || booking.status === 'Rescheduled') && (
                             <>
+                                <Button 
+                                    onClick={() => onReschedule(booking)} 
+                                    className="bg-orange-50 text-brand-orange hover:bg-orange-100 border border-orange-200 flex items-center gap-2"
+                                >
+                                    <RefreshCw size={16} />
+                                    Reschedule
+                                </Button>
                                 <Button onClick={() => { onUpdateStatus(booking.id, 'Cancelled'); onClose(); }} className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
                                     Cancel Booking
                                 </Button>
