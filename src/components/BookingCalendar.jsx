@@ -1,4 +1,5 @@
 import {
+    addDays,
     addMonths,
     eachDayOfInterval,
     endOfMonth,
@@ -51,6 +52,20 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
             label: `${startDisplayHour}:00${startPeriod} - ${endDisplayHour}:00${endPeriod}`
         };
     });
+
+    // Helper function to determine if time slot needs a date note
+    const getDateNote = (slotId) => {
+        const hour = parseInt(slotId.split(':')[0]);
+        const nextDay = addDays(selectedDate, 1);
+        
+        // 11PM-12AM (23:00) - ends on next day
+        if (hour === 23) {
+            return `Ends on ${format(nextDay, 'MMM dd')}`;
+        }
+        // 12AM-6AM (00:00-05:00) - is on next day
+        
+        return null;
+    };
 
     return (
         <div className="space-y-8">
@@ -174,6 +189,10 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                         </li>
                         <li className="flex items-start gap-2">
                             <span className="text-blue-600 font-bold mt-0.5">4.</span>
+                            <span><strong className="text-purple-600">⚠️ Times after 11PM cross into the next day.</strong> Check the date notes on each slot.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-600 font-bold mt-0.5">5.</span>
                             <span>Once selected, click <strong>"Next"</strong> to proceed with your booking.</span>
                         </li>
                     </ul>
@@ -209,13 +228,15 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                                     {sectionSlots.map((slot) => {
                                         const isSelected = selectedTimes.includes(slot.id);
                                         const isBooked = bookedTimes.includes(slot.id);
+                                        const dateNote = getDateNote(slot.id);
+                                        
                                         return (
                                             <button
                                                 key={slot.id}
                                                 onClick={() => !isBooked && onTimeSelect(slot.id)}
                                                 disabled={isBooked}
                                                 className={cn(
-                                                    'py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200',
+                                                    'py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200 relative',
                                                     isBooked
                                                         ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
                                                         : isSelected
@@ -224,7 +245,17 @@ export function BookingCalendar({ selectedDate, onDateSelect, selectedTimes = []
                                                 )}
                                                 title={isBooked ? 'This time slot is already booked' : undefined}
                                             >
-                                                {slot.label}
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span>{slot.label}</span>
+                                                    {dateNote && !isBooked && (
+                                                        <span className={cn(
+                                                            "text-[10px] font-semibold",
+                                                            isSelected ? "text-orange-100" : "text-purple-600"
+                                                        )}>
+                                                            {dateNote}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </button>
                                         );
                                     })}
